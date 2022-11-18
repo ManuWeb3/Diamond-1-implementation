@@ -30,6 +30,7 @@ library TestLib {
   }
 }
 
+// no need to import lib., it's right here
 contract Test1Facet {
     event TestEvent(address something);
 

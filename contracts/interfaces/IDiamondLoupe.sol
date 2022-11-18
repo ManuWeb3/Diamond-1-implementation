@@ -4,6 +4,8 @@ pragma solidity ^0.8.0;
 /******************************************************************************\
 * Author: Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
 * EIP-2535 Diamonds: https://eips.ethereum.org/EIPS/eip-2535
+
+* Cloned and editied: Manu Kapoor
 /******************************************************************************/
 
 // A loupe is a small magnifying glass used to look at diamonds.

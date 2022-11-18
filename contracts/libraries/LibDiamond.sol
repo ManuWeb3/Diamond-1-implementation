@@ -4,12 +4,15 @@ pragma solidity ^0.8.0;
 /******************************************************************************\
 * Author: Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
 * EIP-2535 Diamonds: https://eips.ethereum.org/EIPS/eip-2535
+
+* Cloned and editied: Manu Kapoor
 /******************************************************************************/
 import { IDiamond } from "../interfaces/IDiamond.sol";
 import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
 
 // Remember to add the loupe functions from DiamondLoupeFacet to the diamond.
 // The loupe functions are required by the EIP2535 Diamonds standard
+// loupe are a MUST for transparency and enhancing trust
 
 error NoSelectorsGivenToAdd();
 error NotContractOwner(address _user, address _contractOwner);
@@ -29,16 +32,21 @@ error InitializationFunctionReverted(address _initializationContractAddress, byt
 
 library LibDiamond {
     bytes32 constant DIAMOND_STORAGE_POSITION = keccak256("diamond.standard.diamond.storage");
+    // set this first
 
     struct FacetAddressAndSelectorPosition {
+        // 2 state vars.
         address facetAddress;
         uint16 selectorPosition;
+        // selectorPosition in bytes4[] selectors array in DiamondStorage struct
     }
 
     struct DiamondStorage {
-        // function selector => facet address and selector position in selectors array
+        // 4 state variables
+
+        // function selector => struct(facet address and selector position): position in selectors array
         mapping(bytes4 => FacetAddressAndSelectorPosition) facetAddressAndSelectorPosition;
-        bytes4[] selectors;
+        bytes4[] selectors;     // selectorPosition (index) defined in above struct
         mapping(bytes4 => bool) supportedInterfaces;
         // owner of the contract
         address contractOwner;
@@ -48,12 +56,17 @@ library LibDiamond {
         bytes32 position = DIAMOND_STORAGE_POSITION;
         assembly {
             ds.slot := position
+            // Only direct number costants and references to these constants... 
+            // are supported by inline assembly
+            // => Error: ds.slot := DIAMOND_STORAGE_POSITION
         }
     }
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    // IERC173 not imported/used for this event
 
     function setContractOwner(address _newOwner) internal {
+        // contractOwner: State var in DiamondStorage struct
         DiamondStorage storage ds = diamondStorage();
         address previousOwner = ds.contractOwner;
         ds.contractOwner = _newOwner;
@@ -61,6 +74,7 @@ library LibDiamond {
     }
 
     function contractOwner() internal view returns (address contractOwner_) {
+        // contractOwner: State var in DiamondStorage struct
         contractOwner_ = diamondStorage().contractOwner;
     }
 
@@ -71,6 +85,7 @@ library LibDiamond {
     }
 
     event DiamondCut(IDiamondCut.FacetCut[] _diamondCut, address _init, bytes _calldata);
+    // IDiamondCut inherits IDiamond that has FacetCut struct declared
 
     // Internal function version of diamondCut
     function diamondCut(
@@ -79,12 +94,18 @@ library LibDiamond {
         bytes memory _calldata
     ) internal {
         for (uint256 facetIndex; facetIndex < _diamondCut.length; facetIndex++) {
+            // facetIndex: facetAddress: refers to address of facet which is first var in struct FacetCut
+            // 3 in-f() vars. declared here to save gas------------
             bytes4[] memory functionSelectors = _diamondCut[facetIndex].functionSelectors;
+            // assigned to temporary array 'functionSelectors' inside this f() to avoid... 
+            // R/W ops. in storage for '_diamondCut[facetIndex].functionSelectors' - cheaper, as Patrick taught
             address facetAddress = _diamondCut[facetIndex].facetAddress;
+            // address != 0, will be checked in the resp. f(): add/replace/remove below
             if(functionSelectors.length == 0) {
                 revert NoSelectorsProvidedForFacetForCut(facetAddress);
             }
             IDiamondCut.FacetCutAction action = _diamondCut[facetIndex].action;
+            // ----------------------------------------------------
             if (action == IDiamond.FacetCutAction.Add) {
                 addFunctions(facetAddress, functionSelectors);
             } else if (action == IDiamond.FacetCutAction.Replace) {
@@ -93,22 +114,33 @@ library LibDiamond {
                 removeFunctions(facetAddress, functionSelectors);
             } else {
                 revert IncorrectFacetCutAction(uint8(action));
+                // uint8(action) will give the number to compare with enum-action 0,1,2
             }
-        }
+        }       // for loop ends
+        // will emit ALL changes/upgrades (_diamondCut) after for loop in 1 single event emission
         emit DiamondCut(_diamondCut, _init, _calldata);
+        // init the Diamond right after upgrade in the single f() call to avoid inconsistency
         initializeDiamondCut(_init, _calldata);
     }
 
+    // single iteration of for-loop of diamondCut is going on for either of the below 3 f()
+    // _facetAddress & _functionSelectors retrieved from for-loop
     function addFunctions(address _facetAddress, bytes4[] memory _functionSelectors) internal {        
         if(_facetAddress == address(0)) {
             revert CannotAddSelectorsToZeroAddress(_functionSelectors);
         }
+
         DiamondStorage storage ds = diamondStorage();
-        uint16 selectorCount = uint16(ds.selectors.length);                
+        uint16 selectorCount = uint16(ds.selectors.length);     // needed to run for{} below
+        // count != 0, already checked in diamondCut()
+
         enforceHasContractCode(_facetAddress, "LibDiamondCut: Add facet has no code");
+        // the contract must have been constructed by the time extcodesize(addrs) is called OR an EOA/emptyCode will be reverted
+
         for (uint256 selectorIndex; selectorIndex < _functionSelectors.length; selectorIndex++) {
-            bytes4 selector = _functionSelectors[selectorIndex];
+            bytes4 selector = _functionSelectors[selectorIndex];    // selectors array
             address oldFacetAddress = ds.facetAddressAndSelectorPosition[selector].facetAddress;
+            // oldFacetAddress SHOULD BE zero if this selector is Not already present in the Diamond else revert
             if(oldFacetAddress != address(0)) {
                 revert CannotAddFunctionToDiamondThatAlreadyExists(selector);
             }            
