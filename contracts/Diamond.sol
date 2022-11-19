@@ -6,6 +6,8 @@ pragma solidity ^0.8.0;
 * EIP-2535 Diamonds: https://eips.ethereum.org/EIPS/eip-2535
 *
 * Implementation of a diamond.
+
+* Cloned and editied: Manu Kapoor
 /******************************************************************************/
 
 import { LibDiamond } from "./libraries/LibDiamond.sol";
@@ -20,8 +22,10 @@ error FunctionNotFound(bytes4 _functionSelector);
 // This is used in diamond constructor
 // more arguments are added to this struct
 // this avoids stack too deep errors
+// workaround, in general, for "Stack too deep" error
 struct DiamondArgs {
-    address owner;
+    address owner;      // Diamond Owner
+    // below 2 will be passed into LibDiamond.diamondCut()
     address init;
     bytes initCalldata;
 }
@@ -29,9 +33,10 @@ struct DiamondArgs {
 contract Diamond {    
 
     constructor(IDiamondCut.FacetCut[] memory _diamondCut, DiamondArgs memory _args) payable {
-        LibDiamond.setContractOwner(_args.owner);
+        LibDiamond.setContractOwner(_args.owner);   // set Diamond owner
         LibDiamond.diamondCut(_diamondCut, _args.init, _args.initCalldata);
-
+        // internal call to diamondCut()
+        
         // Code can be added here to perform actions and set state variables.
     }
 

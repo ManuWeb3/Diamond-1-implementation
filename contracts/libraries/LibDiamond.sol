@@ -50,6 +50,8 @@ library LibDiamond {
         mapping(bytes4 => bool) supportedInterfaces;
         // owner of the contract
         address contractOwner;
+        // set thru Library's setContractOwner() when called inside Diamond.sol's constructor
+        // accessed iside Diamond via diamondStorage()
     }
 
     function diamondStorage() internal pure returns (DiamondStorage storage ds) {
@@ -92,7 +94,7 @@ library LibDiamond {
         IDiamondCut.FacetCut[] memory _diamondCut,
         address _init,
         bytes memory _calldata
-    ) internal {
+    ) internal {            // 1 of the internal calls comes from Diamond.sol
         for (uint256 facetIndex; facetIndex < _diamondCut.length; facetIndex++) {
             // facetIndex: facetAddress: refers to address of facet which is first var in struct FacetCut
             // 3 in-f() vars. declared here to save gas------------
@@ -126,6 +128,7 @@ library LibDiamond {
     // single iteration of for-loop of diamondCut is going on for either of the below 3 f()
     // _facetAddress & _functionSelectors retrieved from for-loop
     function addFunctions(address _facetAddress, bytes4[] memory _functionSelectors) internal {        
+        // if address exists
         if(_facetAddress == address(0)) {
             revert CannotAddSelectorsToZeroAddress(_functionSelectors);
         }
@@ -133,7 +136,9 @@ library LibDiamond {
         DiamondStorage storage ds = diamondStorage();
         uint16 selectorCount = uint16(ds.selectors.length);     // needed to run for{} below
         // count != 0, already checked in diamondCut()
-
+        // for i=0, 'selectorCount' above is zero
+        // 'selectorCount' keeps value only till the f() runs, temp. storage. 
+        // Future additions, have to again get value from ds.selectors.length to point to next position to add
         enforceHasContractCode(_facetAddress, "LibDiamondCut: Add facet has no code");
         // the contract must have been constructed by the time extcodesize(addrs) is called OR an EOA/emptyCode will be reverted
 
@@ -145,27 +150,40 @@ library LibDiamond {
                 revert CannotAddFunctionToDiamondThatAlreadyExists(selector);
             }            
             ds.facetAddressAndSelectorPosition[selector] = FacetAddressAndSelectorPosition(_facetAddress, selectorCount);
+            // the 'selectorPosition' for this 'selector' is zero, assigned from 'selectorCount' above, for i=0
+            // here exactly, we added facetAddress of a S/C to the diamond.
             ds.selectors.push(selector);
+            // added this new 'selector' in the 'selectors' array, earlier empty at i=0
             selectorCount++;
+            // to point to the next position in the array to add next selector, whenever it happens
         }
     }
 
     function replaceFunctions(address _facetAddress, bytes4[] memory _functionSelectors) internal {        
         DiamondStorage storage ds = diamondStorage();
+        // SV inside it already got populated in addF() above ideally, not empty now.
+
+        // if address exists
         if(_facetAddress == address(0)) {
             revert CannotReplaceFunctionsFromFacetWithZeroAddress(_functionSelectors);
         }
+        // if it exists, is it a code
         enforceHasContractCode(_facetAddress, "LibDiamondCut: Replace facet has no code");
+        
         for (uint256 selectorIndex; selectorIndex < _functionSelectors.length; selectorIndex++) {
             bytes4 selector = _functionSelectors[selectorIndex];
             address oldFacetAddress = ds.facetAddressAndSelectorPosition[selector].facetAddress;
             // can't replace immutable functions -- functions defined directly in the diamond in this case
+            
+            // Library's f() are immutable
             if(oldFacetAddress == address(this)) {
                 revert CannotReplaceImmutableFunction(selector);
             }
+            // retrieved oldFacetAddress = target _facetAddress with, of course, same f()
             if(oldFacetAddress == _facetAddress) {
                 revert CannotReplaceFunctionWithTheSameFunctionFromTheSameFacet(selector);
             }
+            // no facet, f() does not exist yet in the Diamond.
             if(oldFacetAddress == address(0)) {
                 revert CannotReplaceFunctionThatDoesNotExists(selector);
             }
@@ -206,10 +224,13 @@ library LibDiamond {
     }
 
     function initializeDiamondCut(address _init, bytes memory _calldata) internal {
+        // when I don't want any init code to run right after any upgrade thru diamondCut()
         if (_init == address(0)) {
             return;
         }
-        enforceHasContractCode(_init, "LibDiamondCut: _init address has no code");        
+
+        enforceHasContractCode(_init, "LibDiamondCut: _init address has no code"); 
+               
         (bool success, bytes memory error) = _init.delegatecall(_calldata);
         if (!success) {
             if (error.length > 0) {
