@@ -38,7 +38,9 @@ library LibDiamond {
         // 2 state vars.
         address facetAddress;
         uint16 selectorPosition;
-        // selectorPosition in bytes4[] selectors array in DiamondStorage struct
+        // 'selectorPosition' kept in a diff struct so as to retrieve & update during removeF()
+        // only brought to use in removeFunctions()
+        // selectorPosition in bytes4[] selectors array in DiamondStorage struct        
     }
 
     struct DiamondStorage {
@@ -103,6 +105,9 @@ library LibDiamond {
             // R/W ops. in storage for '_diamondCut[facetIndex].functionSelectors' - cheaper, as Patrick taught
             address facetAddress = _diamondCut[facetIndex].facetAddress;
             // address != 0, will be checked in the resp. f(): add/replace/remove below
+            
+            // Suppose, we want toremove an entire facet,
+            // still, have to give all selectors as an arg. along with facet address. Only facetAdress won't help
             if(functionSelectors.length == 0) {
                 revert NoSelectorsProvidedForFacetForCut(facetAddress);
             }
@@ -150,10 +155,12 @@ library LibDiamond {
                 revert CannotAddFunctionToDiamondThatAlreadyExists(selector);
             }            
             ds.facetAddressAndSelectorPosition[selector] = FacetAddressAndSelectorPosition(_facetAddress, selectorCount);
+            // here selectorCount is setting the SV selectorPosition above inside this struct format **
             // the 'selectorPosition' for this 'selector' is zero, assigned from 'selectorCount' above, for i=0
             // here exactly, we added facetAddress of a S/C to the diamond.
             ds.selectors.push(selector);
             // added this new 'selector' in the 'selectors' array, earlier empty at i=0
+            // selectorCount is a loca lvar declared right inside this f() **
             selectorCount++;
             // to point to the next position in the array to add next selector, whenever it happens
         }
@@ -192,33 +199,60 @@ library LibDiamond {
         }
     }
 
+    // removeF() actually REORDERS the mapping and then... 
+    // remove selectors element + remove that mapping element
     function removeFunctions(address _facetAddress, bytes4[] memory _functionSelectors) internal {        
         DiamondStorage storage ds = diamondStorage();
+        // array will be used here as was used in addF()
         uint256 selectorCount = ds.selectors.length;
+        // facet exists ?
         if(_facetAddress != address(0)) {
             revert RemoveFacetAddressMustBeZeroAddress(_facetAddress);
         }        
+        
+        // have to loop here, no other option        
         for (uint256 selectorIndex; selectorIndex < _functionSelectors.length; selectorIndex++) {
             bytes4 selector = _functionSelectors[selectorIndex];
+            // retrieve original/old facetAddress
+            // due to mapping: gas-eff way to check whether f() exists... 
+            // else looping thru some array costs gas
+
+            // entering target selector below gives me target struct # 1's element
             FacetAddressAndSelectorPosition memory oldFacetAddressAndSelectorPosition = ds.facetAddressAndSelectorPosition[selector];
+            // interesting way to check if function exists ? 
+            // no need to loop thru any array, hence, save gas
             if(oldFacetAddressAndSelectorPosition.facetAddress == address(0)) {
                 revert CannotRemoveFunctionThatDoesNotExist(selector);
             }
-            
-            
+                        
             // can't remove immutable functions -- functions defined directly in the diamond
+            // any f() defined here in is termed as 'directly defined in Diamond' -- immutable
             if(oldFacetAddressAndSelectorPosition.facetAddress == address(this)) {
                 revert CannotRemoveImmutableFunction(selector);
             }
-            // replace selector with last selector
-            selectorCount--;
+            // replace selector with last selector count: it's a local var
+            // to bring it to last element/index of selectors array
+            selectorCount--;    
+            // retrieve position of selector in struct#1 from selectors array in struct#2
+            // this selectorPosition is reading directly the SV selectorPosition inside struct#1
+            // BUT, it's NOT reading the last saved value of selectorPosition
             if (oldFacetAddressAndSelectorPosition.selectorPosition != selectorCount) {
+                // if true above, retrieve last added Selector in selectors array (my e.g. at index 3, i.e. 4th selector
                 bytes4 lastSelector = ds.selectors[selectorCount];
+                // assgined that lastSelector to index # 1 (my target selector to be removed) in selectors array
+                // this way, it got out of the selectors array, here
                 ds.selectors[oldFacetAddressAndSelectorPosition.selectorPosition] = lastSelector;
+                // update [lastSelector].selectorPosition to be '1', from orig. value '3' 
                 ds.facetAddressAndSelectorPosition[lastSelector].selectorPosition = oldFacetAddressAndSelectorPosition.selectorPosition;
+                // still, in my e.g., oldFacetAddressAndSelectorPosition.selectorPosition = 1 
             }
-            // delete last selector
-            ds.selectors.pop();
+            
+            // if above cond. is false @ both values = 3 (my orig. e.g. add 2 facets with 2 f() each), it means...
+            // we're already pointing to last selector, our target selector to be removed
+            ds.selectors.pop();         // delete last selector (also works when same lastSelector got updated at indices # 1 and #3...) 
+            // the case when above 'if' is true, the case when I want to remove selector @ index #1, not the last one)
+
+            // FINALLY, delete that mapping as well - a MUST
             delete ds.facetAddressAndSelectorPosition[selector];
         }
     }
