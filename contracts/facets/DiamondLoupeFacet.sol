@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 /******************************************************************************\
 * Author: Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
 * EIP-2535 Diamonds: https://eips.ethereum.org/EIPS/eip-2535
+
+* Cloned and editied: Manu Kapoor
 /******************************************************************************/
 
 // The functions in DiamondLoupeFacet MUST be added to a diamond.
@@ -12,26 +14,42 @@ import { LibDiamond } from  "../libraries/LibDiamond.sol";
 import { IDiamondLoupe } from "../interfaces/IDiamondLoupe.sol";
 import { IERC165 } from "../interfaces/IERC165.sol";
 
+// All 4 f() of IDiamondLoupe are defined here
+
 contract DiamondLoupeFacet is IDiamondLoupe, IERC165 {
     // Diamond Loupe Functions
     ////////////////////////////////////////////////////////////////////
-    /// These functions are expected to be called frequently by tools.
-    //
+    /// These functions are expected to be called frequently by tools (like louper.dev, etc.)
+    // The struct is a part of IDiamondLoupe interface of EIP2535
     // struct Facet {
     //     address facetAddress;
     //     bytes4[] functionSelectors;
     // }
     /// @notice Gets all facets and their selectors.
     /// @return facets_ Facet
+
+    // kept the visibility external, same as the one in Interface (mandatory)
     function facets() external override view returns (Facet[] memory facets_) {
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
+        // storgae bcz LibDiamond.diamondStorage() returns struct in 'storage' - f() sign
         uint256 selectorCount = ds.selectors.length;
-        // create an array set to the maximum size possible
+        // 'selectors' contain all f() of the Diamond irrespective of the facets
+        
+        // --------------------- 3 Parametres to iterate thru all facets and their resp. f()
+        // create an array set to the maximum size possible = selectorCount
+        // count of factes <= count of all f() i nany Diamond.
+        // Yes, there can be made a contact in solidity with zero f() but that will be of no use in Diamond as delegatecall() will not work.
+        // will loop thru Facet[]
         facets_ = new Facet[](selectorCount);
         // create an array for counting the number of selectors for each facet
+        // will loop thru selectors of the Facet[] var facet_ above
+        // max. count considered to be 65,535 selectors in a given facet => uint16 (0-65,535)
         uint16[] memory numFacetSelectors = new uint16[](selectorCount);
         // total number of facets
+        // this will give us a definite count of facets inside a contract < = selectorCount 
         uint256 numFacets;
+        // ---------------------
+
         // loop through function selectors
         for (uint256 selectorIndex; selectorIndex < selectorCount; selectorIndex++) {
             bytes4 selector = ds.selectors[selectorIndex];

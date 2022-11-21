@@ -26,3 +26,5 @@ interface IDiamondCut is IDiamond {
         bytes calldata _calldata
     ) external;    
 }
+
+// this f() got defiend in DiamondCutfacet.sol

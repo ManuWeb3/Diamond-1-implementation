@@ -4,6 +4,8 @@ pragma solidity ^0.8.0;
 /******************************************************************************\
 * Author: Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
 * EIP-2535 Diamonds: https://eips.ethereum.org/EIPS/eip-2535
+
+* Cloned and editied: Manu Kapoor
 /******************************************************************************/
 
 import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
@@ -24,7 +26,11 @@ contract DiamondCutFacet is IDiamondCut {
         address _init,
         bytes calldata _calldata
     ) external override {
+        // diamondCut() of IDiamondCut is being overridden here.
+        // bcz LibDiamond's diamondCut() is being called below and there is no 3rd dimondCut()
         LibDiamond.enforceIsContractOwner();
+        // owner to be same as the one who owns Diamond.sol
         LibDiamond.diamondCut(_diamondCut, _init, _calldata);
+        // we don't call Lib's diamondCut() directly but via this f() in this exclusive facet
     }
 }
