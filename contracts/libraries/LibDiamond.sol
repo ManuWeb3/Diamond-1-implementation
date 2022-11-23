@@ -49,6 +49,9 @@ library LibDiamond {
         // function selector => struct(facet address and selector position): position in selectors array
         mapping(bytes4 => FacetAddressAndSelectorPosition) facetAddressAndSelectorPosition;
         bytes4[] selectors;     // selectorPosition (index) defined in above struct
+        // mostly, how the flow has worked... 
+        // we input an a local var (index) to bytes4[] selectors, get selector,... 
+        // then input again to the mapping above to get facetAddress from struct#1
         mapping(bytes4 => bool) supportedInterfaces;
         // owner of the contract
         address contractOwner;
