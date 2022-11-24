@@ -62,18 +62,32 @@ contract DiamondLoupeFacet is IDiamondLoupe, IERC165 {
             // using 'selectorIndex (position)',retrieve 1st selector and its resp. facet address
             // below 2 (ds.1 and ds.2) are accessible as we imported LibDiamond.sol here
             bytes4 selector = ds.selectors[selectorIndex];
+            console.log("Selector:");
+            console.logBytes4(selector);
+            
             address facetAddress_ = ds.facetAddressAndSelectorPosition[selector].facetAddress;
+            console.log("facetAddress:");
+            console.logAddress(facetAddress_);
             // loop ops. start--------------------
             bool continueLoop = false;
             // find the functionSelectors array (of Facet struct) for selector and add selector to it, for display
             // 1st nested loop under 1st fresh loop
             for (uint256 facetIndex; facetIndex < numFacets; facetIndex++) {
                 // DEFINITELY, facets_ has afcetAddresses till this if{}, else always false
+                console.log("Comparing facetAddress with the struct's below:");
+                console.log(facets_[facetIndex].facetAddress);
                 if (facets_[facetIndex].facetAddress == facetAddress_) { // 1st iteration: address @ 0 = add.
+                    console.log("numFacetSelectors[facetIndex]");
+                    console.log(numFacetSelectors[facetIndex]);
+
                     facets_[facetIndex].functionSelectors[numFacetSelectors[facetIndex]] = selector;
                     // added 1st selector at 0+0 index of functionSelectors array                               
+                    console.log("numFacetSelectors[facetIndex]++");
+                    console.log(numFacetSelectors[facetIndex]++);
                     numFacetSelectors[facetIndex]++;
+
                     continueLoop = true;
+                    console.log("Going to break the nested loop");
                     break;
                 }
             } // nested loop ends here
@@ -84,11 +98,13 @@ contract DiamondLoupeFacet is IDiamondLoupe, IERC165 {
             // We already assigned selector to it in the nested loop
             if (continueLoop) {
                 continueLoop = false;
+                console.log("Going to continue the loop, inside continueLoop-if struct");
                 continue;
             } // continue @ 1st fresh loop (not nested one). Below code won't execute
 
             // Nick: create a new functionSelectors array for selector... 
             // bcz functionSelectors array did not exist for this selector (unlike above * comment)
+            console.log("Executing last 5 lines below:");
             facets_[numFacets].facetAddress = facetAddress_;
             facets_[numFacets].functionSelectors = new bytes4[](selectorCount);
             facets_[numFacets].functionSelectors[0] = selector;
@@ -97,17 +113,20 @@ contract DiamondLoupeFacet is IDiamondLoupe, IERC165 {
         }   // 1st fresh loop ends here
         
         // 2nd fresh loop
+        console.log("2nd fresh loop starts below");
         for (uint256 facetIndex; facetIndex < numFacets; facetIndex++) {
+            console.log("No. of selectors inside facet");
             uint256 numSelectors = numFacetSelectors[facetIndex];
+            console.log("Assigning all those selectors to the selectors-array");
             bytes4[] memory selectors = facets_[facetIndex].functionSelectors;
-            // setting the number of selectors
+            // setting the number of selectors ??
             assembly {
                 mstore(selectors, numSelectors)
             }
         }
         // all 3 (2 fresh + 1 nested) loop ops. end------------------
 
-        // setting the number of facets
+        // setting the number of facets ??
         assembly {
             mstore(facets_, numFacets)
         }
@@ -119,18 +138,28 @@ contract DiamondLoupeFacet is IDiamondLoupe, IERC165 {
     function facetFunctionSelectors(address _facet) external override view returns (bytes4[] memory _facetFunctionSelectors) {
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
         uint256 selectorCount = ds.selectors.length;
+        // for populating the _facetFunctionSelectors array inside if{}
         uint256 numSelectors;
+        // initialized all elements of _facetFunctionSelectors array with zero, below to avoid reverts
+        // set size of _facetFunctionSelectors at maximum in case there is only 1 facet... 
+        // and has all the selectors
         _facetFunctionSelectors = new bytes4[](selectorCount);
         // loop through function selectors
         for (uint256 selectorIndex; selectorIndex < selectorCount; selectorIndex++) {
+            // same 2 std. ops. of retrieving 'selector' and the resp. 'facetAddress'
             bytes4 selector = ds.selectors[selectorIndex];
             address facetAddress_ = ds.facetAddressAndSelectorPosition[selector].facetAddress;
+            
+            // looking for the right facet (matching input) corres. to the selector retrieved above... 
+            // and saving all those selectors corresp. to the facet in _facetFunctionSelectors and... 
+            // incrementing numSelectors
             if (_facet == facetAddress_) {
+                // numSelectors for now is zero, pointing to position # 1
                 _facetFunctionSelectors[numSelectors] = selector;
                 numSelectors++;
             }
         }
-        // Set the number of selectors in the array
+        // Set the number of selectors in the array ??
         assembly {
             mstore(_facetFunctionSelectors, numSelectors)
         }
@@ -142,30 +171,44 @@ contract DiamondLoupeFacet is IDiamondLoupe, IERC165 {
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
         uint256 selectorCount = ds.selectors.length;
         // create an array set to the maximum size possible
+        // just in case, all facets have 1 f() each, hence count facets = selector-count (max.)
         facetAddresses_ = new address[](selectorCount);
+        // used to populate the addresses array, gets its value = 1 in the end
         uint256 numFacets;
         // loop through function selectors
         for (uint256 selectorIndex; selectorIndex < selectorCount; selectorIndex++) {
+            // std. retrieval of a selector and its corresp. facetAddress
             bytes4 selector = ds.selectors[selectorIndex];
             address facetAddress_ = ds.facetAddressAndSelectorPosition[selector].facetAddress;
+            
             bool continueLoop = false;
-            // see if we have collected the address already and break out of loop if we have
+            // Nick: see if we have collected the address already and break out of loop if we have
+            // 0 < 0 for the first ever facet - UNUSUAL tactic
+            // 'numFacets' reaches to this last set value only if we have a new facetAddress yet to be added else match & break, last value not reached
             for (uint256 facetIndex; facetIndex < numFacets; facetIndex++) {
+                // if {} failed, then it will go to next value of facetIndex
                 if (facetAddress_ == facetAddresses_[facetIndex]) {
                     continueLoop = true;
-                    break;
+                    break;      // confirmed here that 'break' breaks only the loop in which it's present, 
+                    // not the outer one(s).
                 }
-            }
-            // continue loop if we already have the address
+            } // nested loop ends here
+            
+            // 'break' and 'continue' will go hand-in-hand
+            // Nick: continue loop if we already have the address
             if (continueLoop) {
                 continueLoop = false;
-                continue;
+                continue;   // will start next iteration in the loop in which it's present
+                // jump to the next selector to see what facetAddress it belongs to
             }
             // include address
+            // value of 'numFacets' retained at position 2 (index#1) after adding first facet to array
+            // 2nd facet will add at index#1
             facetAddresses_[numFacets] = facetAddress_;
             numFacets++;
-        }
-        // Set the number of facet addresses in the array
+        } // fresh loop ends here
+
+        // Set the number of facet addresses in the array ??
         assembly {
             mstore(facetAddresses_, numFacets)
         }
@@ -177,12 +220,18 @@ contract DiamondLoupeFacet is IDiamondLoupe, IERC165 {
     /// @return facetAddress_ The facet address.
     function facetAddress(bytes4 _functionSelector) external override view returns (address facetAddress_) {
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
+        // retrieved the selector and put it in struct to retrieve and return the address
+        // no need to do - ds.selectors.length and ds.selectors[selectorIndex], as selector is already the arg.
         facetAddress_ = ds.facetAddressAndSelectorPosition[_functionSelector].facetAddress;
     }
 
     // This implements ERC-165.
+    // Defined by us in our code. Orig. interface has just the declaration
+    // had to declare the SV mapping inside 'ds' accordingly
     function supportsInterface(bytes4 _interfaceId) external override view returns (bool) {
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
         return ds.supportedInterfaces[_interfaceId];
+        // for the first time ever, 4th member of the struct (mapping) got accessed
+        // and returned true/false
     }
 }

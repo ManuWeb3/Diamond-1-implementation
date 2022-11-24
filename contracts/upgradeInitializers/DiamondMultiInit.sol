@@ -6,6 +6,8 @@ pragma solidity ^0.8.0;
 * EIP-2535 Diamonds: https://eips.ethereum.org/EIPS/eip-2535
 *
 * Implementation of a diamond.
+
+* Cloned and editied: Manu Kapoor
 /******************************************************************************/
 
 import { LibDiamond } from "../libraries/LibDiamond.sol";

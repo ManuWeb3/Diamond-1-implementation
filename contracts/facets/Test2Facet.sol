@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 contract Test2Facet {
+    // 20 f() defined (though with empty bodies)
     function test2Func1() external {}
 
     function test2Func2() external {}
