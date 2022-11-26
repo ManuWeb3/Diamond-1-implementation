@@ -10,23 +10,35 @@ pragma solidity ^0.8.0;
 * Cloned and editied: Manu Kapoor
 /******************************************************************************/
 
-import { LibDiamond } from "../libraries/LibDiamond.sol";
+import { LibDiamond } from "../libraries/LibDiamond.sol";   // to access DiamondStorage
 import { IDiamondLoupe } from "../interfaces/IDiamondLoupe.sol";
 import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
 import { IERC173 } from "../interfaces/IERC173.sol";
 import { IERC165 } from "../interfaces/IERC165.sol";
 
-// It is expected that this contract is customized if you want to deploy your diamond
-// with data from a deployment script. Use the init function to initialize state variables
-// of your diamond. Add parameters to the init funciton if you need to.
+// -----------------------------------------------------------------------
+/// @notice This is the _init/contract (address) which is being referred to 
+/// time and again in diamondCut() docs throughout on which
+/// _calldata/init() will be executed (if at all needed in our custoim Diamond)
+/// during deployment/upgrdation of Diamond using diamondCut()'s 2nd and 3rd arg.
 
-// Adding parameters to the `init` or other functions you add here can make a single deployed
+/// Hence, can add 'n' number of SV here OR, more so, full f() as per the needs of our custom Diamond
+// -----------------------------------------------------------------------
+
+// It is expected that this contract is customized if you want to deploy your diamond
+// with data from a deployment script. 
+// Use the init function to initialize state variables of your diamond. 
+// Add parameters* (those SV that you want to be inititalized in your custom Diamond) to the init funciton if you need to.
+
+// Can add more SV here inside init() OR, guess what, add full flegded custom f() here for my custom Diamond
+
+// Adding parameters* to the `init` or other functions you add here can make a single deployed
 // DiamondInit contract reusable accross upgrades, and can be used for multiple diamonds.
 
 contract DiamondInit {    
 
-    // You can add parameters to this function in order to pass in 
-    // data to set your own state variables
+    // You can add parameters* to this function in order to pass in 
+    // data to set your own state variables (My customized version of the Diamond)
     function init() external {
         // adding ERC165 data
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
@@ -36,10 +48,12 @@ contract DiamondInit {
         ds.supportedInterfaces[type(IERC173).interfaceId] = true;
 
         // add your own state variables 
+
         // EIP-2535 specifies that the `diamondCut` function takes two optional 
         // arguments: address _init and bytes calldata _calldata
-        // These arguments are used to execute an arbitrary function using delegatecall
-        // in order to set state variables in the diamond during deployment or an upgrade
+
+        // "These arguments are used to execute an arbitrary function using delegatecall (_init.delegatecall(_calldata))
+        // in order to set state variables in the diamond during deployment or an upgrade"
         // More info here: https://eips.ethereum.org/EIPS/eip-2535#diamond-interface 
     }
 }

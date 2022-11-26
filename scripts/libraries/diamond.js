@@ -1,42 +1,65 @@
 /* global ethers */
 
+// custom (enum-type) var in JS
 const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 }
 
-// get function selectors from ABI
+// get function selectors from ABI - typical JS setup - advance level
+// Contract => all its selectors
 function getSelectors (contract) {
+  // Object.keys(object): returns 'key(s)' part of the key-value pair inside array (index) / JSON obj. {keys}
+  console.log(`contract.interface.functions: ${contract.interface.functions}`)
   const signatures = Object.keys(contract.interface.functions)
+  console.log(`Signatures (from Object.keys()): ${signatures}`)
+
   const selectors = signatures.reduce((acc, val) => {
+    console.log(`variable Val: ${val}`)
     if (val !== 'init(bytes)') {
       acc.push(contract.interface.getSighash(val))
     }
+    console.log(`variable Acc: ${acc}`)
     return acc
   }, [])
   selectors.contract = contract
-  selectors.remove = remove
-  selectors.get = get
+  selectors.remove = remove   // remove some functionSelectors from the array corresponding to the array of funcSignatures
+  selectors.get = get         // get functionSelectors from the array of corresponding funcSignatures
+  console.log(`Selectors in the contract: ${selectors}`)
   return selectors
 }
 
-// get function selector from function signature
+// get function selector from function signature: 2-step process in JS
+// Function (sign) => only its selector
 function getSelector (func) {
+  console.log(`Function passed in: ${func}`)
+  // Step: 1
   const abiInterface = new ethers.utils.Interface([func])
+  // create a new Interface from obj rep. the ABI- this case: func (an ABI with single function - sort of)
+  // Step: 2
   return abiInterface.getSighash(ethers.utils.Fragment.from(func))
+  // Fragment is an Error, Event, Funcitons, Constructor - all that describes an ABI of the contract
+  // Topic Hash is the first slot that has a keccak256 hash value at [0] - sort of event ID
+  // interface.getSighash(): iface.getSighash("balanceOf(address)"); = '0x70a08231'
+  // ethers.utils.Fragment.from(func): this creates a new sub-class of type Fragment
 }
 
 // used with getSelectors to remove selectors from an array of selectors
 // functionNames argument is an array of function signatures
+// details - lo??
 function remove (functionNames) {
-  const selectors = this.filter((v) => {
+  const selectors = this.filter((v) => {    // body of arg.-test f() wrote inside filter() itself as per ES6
+    // .filter(): creates a new array (here: 'selectors') with the results returned out of the f() that executes a test, that's passed into filter() as an arg.
     for (const functionName of functionNames) {
-      if (v === this.contract.interface.getSighash(functionName)) {
-        return false
+      if (v === this.contract.interface.getSighash(functionName)) {   // looping var 'functionName'
+        return false  // if anyone matched (present = not removed)
       }
     }
-    return true
+    return true       // if None matched (absent = removed)
   })
+  // after all funcSelectors iterated thru, below will exec.
   selectors.contract = this.contract
   selectors.remove = this.remove
   selectors.get = this.get
+  // filtered selectors returned
+  console.log(`Filerted Selectors (remove): ${selectors}`)
   return selectors
 }
 
@@ -45,27 +68,36 @@ function remove (functionNames) {
 function get (functionNames) {
   const selectors = this.filter((v) => {
     for (const functionName of functionNames) {
-      if (v === this.contract.interface.getSighash(functionName)) {
-        return true
+      if (v === this.contract.interface.getSighash(functionName)) {   // looping var 'functionName'
+        return true   // if any matched (present = gettable)
       }
     }
-    return false
+    return false      // if None matched (absent = non-gettable)
   })
+  // after all funcSelectors iterated thru, below will exec.
   selectors.contract = this.contract
   selectors.remove = this.remove
   selectors.get = this.get
+  // filtered selectors returned
+  console.log(`Filerted Selectors (get): ${selectors}`)
   return selectors
 }
 
-// remove selectors using an array of signatures
+// remove selectors using an array of signatures - details ??
 function removeSelectors (selectors, signatures) {
+  console.log(`Signatures as an arg.: ${signatures}`)
   const iface = new ethers.utils.Interface(signatures.map(v => 'function ' + v))
+  // .map() creates a new array by calling a f() for every element in the orig. array by exec that f() only once per element
   const removeSelectors = signatures.map(v => iface.getSighash(v))
   selectors = selectors.filter(v => !removeSelectors.includes(v))
+  console.log(`Selectors as return var.: ${selectors}`)
   return selectors
 }
 
-// find a particular address position in the return value of diamondLoupeFacet.facets()
+// find a particular address' position in the ('factes' array) return value of diamondLoupeFacet.facets()
+// 'diamondLoupeFacet' is an instance of contract abstraction for: DiamondLoupeFacet.sol, in JS
+// and factes() is its first f()
+// ooking for the index/position of a facet's address in the factes array of struct Factes with 2 members: addresses and bytes4[]
 function findAddressPositionInFacets (facetAddress, facets) {
   for (let i = 0; i < facets.length; i++) {
     if (facets[i].facetAddress === facetAddress) {
@@ -80,3 +112,4 @@ exports.FacetCutAction = FacetCutAction
 exports.remove = remove
 exports.removeSelectors = removeSelectors
 exports.findAddressPositionInFacets = findAddressPositionInFacets
+// except 'get', all exported.

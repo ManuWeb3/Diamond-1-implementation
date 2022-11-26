@@ -1,6 +1,7 @@
 /* global ethers */
 /* eslint prefer-const: "off" */
 
+// 6 exported by diamond.js out of which 2 imported here (f() and kind of enum-type)
 const { getSelectors, FacetCutAction } = require('../scripts/libraries/diamond.js')
 
 async function deployDiamond () {
