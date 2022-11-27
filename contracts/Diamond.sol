@@ -28,10 +28,12 @@ struct DiamondArgs {
     // below 2 will be passed into LibDiamond.diamondCut()
     address init;
     bytes initCalldata;
+    // above 2 are either of std./customzied DiamondInit.sol and DiamondMultiInit.sol as _init-address
+    // though ERC does NOT specify 'implementation strategy' as as part of the std.
 }
 
 contract Diamond {    
-
+    // @ deployment stage, adding to it the context of 3 std. facets via below
     constructor(IDiamondCut.FacetCut[] memory _diamondCut, DiamondArgs memory _args) payable {
         LibDiamond.setContractOwner(_args.owner);   // set Diamond owner
         LibDiamond.diamondCut(_diamondCut, _args.init, _args.initCalldata);

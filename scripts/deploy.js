@@ -12,14 +12,15 @@ async function deployDiamond () {
   // 1). Deploy DiamondInit (3-step code)
   // DiamondInit provides a function (init()) that is called when the diamond is upgraded or deployed to initialize state variables
   // Read about how the diamondCut function works in the EIP2535 Diamonds standard
+  console.log("Deploying DiamondInit.sol")
   const DiamondInit = await ethers.getContractFactory('DiamondInit')
   const diamondInit = await DiamondInit.deploy()
   await diamondInit.deployed()
-  console.log('DiamondInit deployed:\n', diamondInit.address)
-
+  console.log('DiamondInit deployed:', diamondInit.address)
+  console.log("--------------------------------------------")
   // 2). Deploy all 3 facets and set the `facetCuts` array variable with 3 'keys'
   console.log('')
-  console.log('Deploying facets')
+  console.log('Deploying facets \n')
   const FacetNames = [
     'DiamondCutFacet',
     'DiamondLoupeFacet',
@@ -29,12 +30,13 @@ async function deployDiamond () {
   const facetCuts = []
   // (3-step code inside the loop)
   for (const FacetName of FacetNames) {
+    console.log(`Deploying ${FacetName}`)
     const Facet = await ethers.getContractFactory(FacetName)
     const facet = await Facet.deploy()
     await facet.deployed()
     // 2x${} inside console.log()
     console.log(`${FacetName} deployed: ${facet.address}`)
-
+    
     facetCuts.push({
       // the following 3 'keys' of this array variable of struct-type are the names of members...
       // of struct FacetCut{} declared in IDiamond.sol
@@ -60,6 +62,7 @@ async function deployDiamond () {
   }
 
   // 3). Deploy Diamond (3-step code)
+  console.log("Deploying Diamond.sol")
   const Diamond = await ethers.getContractFactory('Diamond')
   const diamond = await Diamond.deploy(facetCuts, diamondArgs)  
   // Above: facetCuts, diamondArgs = 
@@ -67,7 +70,7 @@ async function deployDiamond () {
   // and 2 f() of LibDiamond inside constructor will be executed
   await diamond.deployed()
 
-  console.log()
+  //console.log()
   console.log('Diamond deployed:', diamond.address)
 
   // returning the address of the diamond
