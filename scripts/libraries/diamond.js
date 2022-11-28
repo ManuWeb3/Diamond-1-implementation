@@ -5,24 +5,31 @@ const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 }
 
 // get function selectors from ABI - typical JS setup - advance level
 // Contract => all its selectors
+
+// ALL NOTES reg. new f() of JS/ethers.js @ NOV 27 - notebook
+
  function getSelectors (contract) {
   // Object.keys(object): returns 'key(s)' part of the key-value pair inside array (index) / JSON obj. {keys}
-  console.log(`contract.interface.functions: ${JSON.stringify(contract.interface.functions)}`)
+  console.log(`\n contract.interface.functions: \n ${JSON.stringify(contract.interface.functions)}`)
   const signatures = Object.keys(contract.interface.functions)
-  console.log(`Signatures (from Object.keys()): ${signatures}`)
+  console.log(`\n Signatures (from Object.keys()): ${signatures}`)
 
-  const selectors = signatures.reduce((acc, val) => {
-    console.log(`variable Val: ${val}`)
+  const selectors = signatures.reduce((acc, val) => {   
+    // Actual Selectors (array type = acc, below) returned @ the end to this var 'selectors' above
+    // error: console.log(`\n'Selectors' returned from signatures.reduce((acc, val): ${selectors}`)
+    console.log(`\n variable Val: ${val}`)
     if (val !== 'init(bytes)') {
-      acc.push(contract.interface.getSighash(val))
+      // error: console.log(`\n Init(bytes) for now: ${init(bytes)}`)
+      console.log(`\n Individual Sighashes: ${contract.interface.getSighash(val)}`)
+      acc.push(contract.interface.getSighash(val))      
     }
-    console.log(`variable Acc: ${acc}`)
+    console.log(`\n Array variable Acc: ${acc}`)
     return acc
   }, [])
   selectors.contract = contract
   selectors.remove = remove   // remove some functionSelectors from the array corresponding to the array of funcSignatures
   selectors.get = get         // get functionSelectors from the array of corresponding funcSignatures
-  console.log(`Selectors in the contract: ${selectors}`)
+  console.log(`\n Selectors in the contract: ${selectors}`)
   console.log("--------------------------")
   return selectors
 }
@@ -30,7 +37,7 @@ const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 }
 // get function selector from function signature: 2-step process in JS
 // Function (sign) => only its selector
  function getSelector (func) {
-  console.log(`Function passed in: ${func}`)
+  console.log(`\n Function passed in: ${func}`)
   // Step: 1
   const abiInterface = new ethers.utils.Interface([func])
   // create a new Interface from obj rep. the ABI- this case: func (an ABI with single function - sort of)
@@ -109,14 +116,13 @@ const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 }
 
 // ADDED async to all above which NICK did NOT
 // added module.exports = {}
-module.exports = {getSelectors, getSelector, FacetCutAction, remove, removeSelectors, findAddressPositionInFacets}
+// module.exports = {getSelectors, getSelector, FacetCutAction, remove, removeSelectors, findAddressPositionInFacets}
 // except 'get', all exported.
 
-/*
+
 exports.getSelectors = getSelectors
 exports.getSelector = getSelector
 exports.FacetCutAction = FacetCutAction
 exports.remove = remove
 exports.removeSelectors = removeSelectors
 exports.findAddressPositionInFacets = findAddressPositionInFacets
-*/

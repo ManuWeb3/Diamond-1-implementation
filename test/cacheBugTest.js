@@ -2,13 +2,18 @@
 /* eslint-disable prefer-const */
 
 const { deployDiamond } = require('../scripts/deploy.js')
+// imported complete f() here to deploy all 5 S/C in 3 categories (Init, 3xfacets, Diamond.sol)
 
-const { FacetCutAction } = require('../scripts/libraries/diamond.js')
+const { FacetCutAction } = require('../scripts/libraries/diamond.js')  
+// data structure of 'Action'/Upgrading a Diamond (not getSelectors(), etc. for now)
 
 const { assert } = require('chai')
 
-// The diamond example comes with 8 function selectors
+// The diamond example comes with 8 function selectors (excl. Diamond.sol itself, its fallback(), & LibDiamond.sol)
+// 3 std. Facets: 
+// 1XDiamondCutFacet, 5XDiamondLoupeFacet, 2XOwnershipFacet
 // [cut, loupe, loupe, loupe, loupe, erc165, transferOwnership, owner]
+
 // This bug manifests if you delete something from the final
 // selector slot array, so we'll fill up a new slot with
 // things, and have a fresh row to work with.
@@ -24,6 +29,7 @@ describe('Cache bug test', async () => {
   const sel4 = '0x24c1d5a7' // fills up slot 1
   const sel5 = '0xcbb835f6' // fills up slot 1
   const sel6 = '0xcbb835f7' // fills up slot 1
+
   const sel7 = '0xcbb835f8' // fills up slot 2
   const sel8 = '0xcbb835f9' // fills up slot 2
   const sel9 = '0xcbb835fa' // fills up slot 2
@@ -47,9 +53,11 @@ describe('Cache bug test', async () => {
       sel10
     ]
 
-    let diamondAddress = await deployDiamond()
+    let diamondAddress = await deployDiamond()  // only value returned by this f() in deploy.js
+    // get below 2 contracts' deployed instances - abstraction objects
     let diamondCutFacet = await ethers.getContractAt('DiamondCutFacet', diamondAddress)
     diamondLoupeFacet = await ethers.getContractAt('DiamondLoupeFacet', diamondAddress)
+    
     const Test1Facet = await ethers.getContractFactory('Test1Facet')
     test1Facet = await Test1Facet.deploy()
     await test1Facet.deployed()

@@ -74,6 +74,8 @@ async function deployDiamond () {
   console.log('Diamond deployed:', diamond.address)
 
   // returning the address of the diamond
+  // only thing that's returned out of this script
+  // later on, got caputred in diamondAddress variable in cacheBugtest.js
   return diamond.address
 }
 
