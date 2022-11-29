@@ -1,7 +1,7 @@
 /* global ethers */
 
 // custom (enum-type) var in JS
-const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 }
+const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 }    //inspired from IDiamond.sol's facetCutAction-enum
 
 // get function selectors from ABI - typical JS setup - advance level
 // Contract => all its selectors

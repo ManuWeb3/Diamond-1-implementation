@@ -36,7 +36,7 @@ library TestLib {
 contract Test1Facet {
     event TestEvent(address something);   // nowhere emitted
   // 2 f() with bodies (accessing lib.)
-   function test1Func1() external {
+    function test1Func1() external {
       TestLib.setMyAddress(address(this));
     }
     // no passing arg. Hardcoded set

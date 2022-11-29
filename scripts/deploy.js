@@ -14,8 +14,23 @@ async function deployDiamond () {
   // Read about how the diamondCut function works in the EIP2535 Diamonds standard
   console.log("Deploying DiamondInit.sol")
   const DiamondInit = await ethers.getContractFactory('DiamondInit')
+  // getContractFactory(): belongs to HH-etehrs plugin (not in Core ethers.js)
+  // i/p arg.: contract-name is a must here
+  // returns Promise<ethers.ContractFactory> for the contract that will lead to contract deployment, next
   const diamondInit = await DiamondInit.deploy()
+  // part of Core ethers.js pkg.
+  // i/p arg. is optional here:
+  // Needed when contructor is Not default, it has some args. to be passed into
+  // ContractFactory deploys the contract thru signer (default – deployer) at the address after tx gets mined
+  // and returns the promise<contract>
   await diamondInit.deployed()
+  // no i/p arg, is needed here
+  // create an instance of the 'contract abstraction'...
+  // that represents the deployed instance at its DEFAULT address thru .deploy() above THOUGH .deploy() also creates/returns contract abstraction
+  // save the returned instance in a local var to interact with the contract as JS object THOUGH c-a returned by .deploy() can also be used for interaction
+  // MAIN PURPOSE---
+  // if no local var created to save the returned contract abstraction,...
+  // then it's only done as a wait() to let it successfully mine the deploy()tx before safely interacting with the contract
   console.log('DiamondInit deployed:', diamondInit.address)
   console.log("--------------------------------------------")
   // 2). Deploy all 3 facets and set the `facetCuts` array variable with 3 'keys'

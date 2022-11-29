@@ -203,12 +203,13 @@ library LibDiamond {
     }
 
     // removeF() actually REORDERS the mapping and then... 
-    // remove selectors element + remove that mapping element
+    // remove selectors element + remove that mapping element from struct # 1
     function removeFunctions(address _facetAddress, bytes4[] memory _functionSelectors) internal {        
         DiamondStorage storage ds = diamondStorage();
         // array will be used here as was used in addF()
         uint256 selectorCount = ds.selectors.length;
-        // facet exists ?
+        // facet exists at non-zero address? if yes, then REVERT
+        // _facetAddress has to be = address(0)
         if(_facetAddress != address(0)) {
             revert RemoveFacetAddressMustBeZeroAddress(_facetAddress);
         }        
