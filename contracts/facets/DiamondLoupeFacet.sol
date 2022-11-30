@@ -138,6 +138,8 @@ contract DiamondLoupeFacet is IDiamondLoupe, IERC165 {
     function facetFunctionSelectors(address _facet) external override view returns (bytes4[] memory _facetFunctionSelectors) {
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
         uint256 selectorCount = ds.selectors.length;
+        // console.log("Selectors array length:");
+        // console.log(selectorCount);
         // for populating the _facetFunctionSelectors array inside if{}
         uint256 numSelectors;
         // initialized all elements of _facetFunctionSelectors array with zero, below to avoid reverts

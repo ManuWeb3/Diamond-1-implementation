@@ -156,6 +156,8 @@ library LibDiamond {
             // oldFacetAddress SHOULD BE zero if this selector is Not already present in the Diamond else revert
             if(oldFacetAddress != address(0)) {
                 revert CannotAddFunctionToDiamondThatAlreadyExists(selector);
+                // will NOT revert in case we re-deploy Diamond (and Init + 3xfacets) to different addresses
+                // bcz both are different diamonds with diff. contract-storages
             }            
             ds.facetAddressAndSelectorPosition[selector] = FacetAddressAndSelectorPosition(_facetAddress, selectorCount);
             // here selectorCount is setting the SV selectorPosition above inside this struct format **
@@ -166,6 +168,7 @@ library LibDiamond {
             // selectorCount is a loca lvar declared right inside this f() **
             selectorCount++;
             // to point to the next position in the array to add next selector, whenever it happens
+            // selectors Count incremented, and now selectorIndex will also get inc. as end-of-loop reached
         }
     }
 

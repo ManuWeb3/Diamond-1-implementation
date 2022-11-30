@@ -33,6 +33,7 @@ async function deployDiamond () {
   // then it's only done as a wait() to let it successfully mine the deploy()tx before safely interacting with the contract
   console.log('DiamondInit deployed:', diamondInit.address)
   console.log("--------------------------------------------")
+
   // 2). Deploy all 3 facets and set the `facetCuts` array variable with 3 'keys'
   console.log('')
   console.log('Deploying facets \n')
@@ -63,9 +64,11 @@ async function deployDiamond () {
       action: FacetCutAction.Add,
       functionSelectors: getSelectors(facet)
       // 'facet' is the contract's instance's abstraction object in JS
+      // the 8 selectors of these 3 std. S/C are added to the SV "selectors" mapping via diamondCut() below whicl dep. Diamond.sol
     })
   }
 
+  // 3). Deploy Diamond (3-step code)
   // Creating a function call, TO PASS AS AN ARG. IN DIAMOND.sol's constructor
   // This call gets executed during deployment and can also be executed in upgrades
   // It is executed with delegatecall on the DiamondInit address. (2nd and 3rd arg. of diamondCut())
@@ -79,7 +82,6 @@ async function deployDiamond () {
     initCalldata: functionCall
   }
 
-  // 3). Deploy Diamond (3-step code)
   console.log("Deploying Diamond.sol")
   const Diamond = await ethers.getContractFactory('Diamond')
   const diamond = await Diamond.deploy(facetCuts, diamondArgs)  

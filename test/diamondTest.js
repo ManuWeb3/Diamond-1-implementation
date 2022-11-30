@@ -1,5 +1,7 @@
 /* global describe it before ethers */
 
+// 11 Unit tests for now
+
 // No need to necessarily run cacheBugTest.js before running this test script
 // Why?
 // bcz here also, we're running deploy.js and returning 3 contract abst. of 3 std. facets
@@ -27,13 +29,16 @@ describe('DiamondTest', async function () {
   let txReceipt
   let result
   
-  const addresses = []    
+  const addresses = []    // scope is global across all individual "it" tests
   // to push addresses (1x1 - loop) of 3xfacets that got 'added' in the Diamond @ deployment using deploy.js
 
   // Deploy Diamond, return its address, and return contract abst. of all 3 std. facets using Diamond-address
+  
+  // PATRICK uses beforeEach{} with ethers.getContract() to return new connection with an already deployed contract (hh deploy/auto-deploy before hh test)
   before(async function () {
     // all 5 S/C deployed contained in deploy.js
     diamondAddress = await deployDiamond()    // all std. outputs will be displayed
+    // diamondAddress dffers with each deployment (beforeEach)
 
     // return instances of contract abstractions of 3 std. facets
     diamondCutFacet = await ethers.getContractAt('DiamondCutFacet', diamondAddress)
@@ -57,20 +62,32 @@ describe('DiamondTest', async function () {
     // .sameMembers(set1, set2, [message])
     // Asserts that set1 and set2 have the same members IN ANY ORDER. 
     // Uses a strict equality check (===).
-    let selectors = getSelectors(diamondCutFacet)
+    let selectors = getSelectors(diamondCutFacet)   // in re-deploy, diamondCutFacet is new
+    // console.log(`\nSelectors in DiamondCutFacet: ${selectors}`) 
     // console.log(`Facet @ addresses[0]: ${addresses[0]}`): error being thrown right here
     // if it.only this test bcz addresses[] array does Not get populated
     // bcz first unit test did not run at all
-    result = await diamondLoupeFacet.facetFunctionSelectors(addresses[0])
-    assert.deepEqual(result, selectors, 'Members differ')
+    // console.log(`\nLength of addresses array: ${addresses.length}`) - it's 3, not 6 
+    // (bcz unit test 1 won't re-run for test # 2)
+    // const newAddress0 = "0x0165878A594ca255338adfa4d48449f69242Eb8F"
+    result = await diamondLoupeFacet.facetFunctionSelectors(addresses[0])   // in re-deploy, diamondLoupeFacet is also new
+    // address passed as a string above as JS cannot read numeric literals > 2^53 (BigNumber can help)
+
+    // console.log(`\naddresses[0] for "result": ${addresses[0]}`)
+    // console.log(`\nResult in DiamondCutFacet: ${result}`)
+    assert.deepEqual(result, selectors, 'Members differ')   
+    // if test failed above, it won't run the subsequent code in the same unit test
+
     // .deepEqual(actual, expected, [message])
     // bcz deepEqual works for mixed/any type, it DOES work for 2 array-types here (also patrick Github)
 
     // Facet # 2
+    // const newAddress1 = "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"
     selectors = getSelectors(diamondLoupeFacet)
     result = await diamondLoupeFacet.facetFunctionSelectors(addresses[1])
     assert.sameMembers(result, selectors)
     // Facet # 3
+    // const newAddress2 = "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"
     selectors = getSelectors(ownershipFacet)
     result = await diamondLoupeFacet.facetFunctionSelectors(addresses[2])
     assert.sameMembers(result, selectors)
@@ -119,7 +136,7 @@ describe('DiamondTest', async function () {
       [   // array of struct instances
         { // 1 such struct instance
         facetAddress: test1Facet.address,
-        action: FacetCutAction.Add,
+        action: FacetCutAction.Add,     // mapping will get updated and Test1Facet will "bear" Diamond's stable address, below test # 5
         functionSelectors: selectors    // all 20 selectors sans supportsInterface (0x01ffc9a7)
         }
       ],
@@ -140,12 +157,21 @@ describe('DiamondTest', async function () {
     assert.sameMembers(result, selectors)
   })
 
-  it('should test function call', async () => {
+  // Test # 5
+  it.only('should test function call of Test1Facet at Diamond-address', async () => {
+    // "diamondAddress" will work here bcz Test1Facet has been added using diamondCut()
+    // test1Facet is an instance of its contract_abstraction
     const test1Facet = await ethers.getContractAt('Test1Facet', diamondAddress)
-    await test1Facet.test1Func10()
+    const tx = await test1Facet.test1Func10()   // tx here for display below, just in case
+    /* Testing the output by actually displaying it
+    const txReceipt = await tx.wait()
+    console.log(`\nTransaction Receipt of test1Func10: ${JSON.stringify(txReceipt)}`)
+    */
   })
 
+  // Test # 6
   it('should replace supportsInterface function', async () => {
+    // we're redeploying Test1Facet here
     const Test1Facet = await ethers.getContractFactory('Test1Facet')
     const selectors = getSelectors(Test1Facet).get(['supportsInterface(bytes4)'])
     const testFacetAddress = addresses[3]
