@@ -7,30 +7,34 @@ const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 }    //inspired from IDia
 // Contract => all its selectors
 
 // ALL NOTES reg. new f() of JS/ethers.js @ NOV 27 - notebook
-
+// IMPORTANCE of getSelectors: Unit test
+// use viz-a-viz "diamondLoupeFacet.facetFunctionSelectors(addresses[2])"
  function getSelectors (contract) {
   // Object.keys(object): returns 'key(s)' part of the key-value pair inside array (index) / JSON obj. {keys}
-  console.log(`\n contract.interface.functions: \n ${JSON.stringify(contract.interface.functions)}`)
+  // console.log(`\n contract.interface.functions: \n ${JSON.stringify(contract.interface.functions)}`)
   const signatures = Object.keys(contract.interface.functions)
-  console.log(`\n Signatures (from Object.keys()): ${signatures}`)
+  //console.log(`\n Signatures (from Object.keys()): ${signatures}`)
 
   const selectors = signatures.reduce((acc, val) => {   
     // Actual Selectors (array type = acc, below) returned @ the end to this var 'selectors' above
     // error: console.log(`\n'Selectors' returned from signatures.reduce((acc, val): ${selectors}`)
-    console.log(`\n variable Val: ${val}`)
+    //console.log(`\n variable Val: ${val}`)
     if (val !== 'init(bytes)') {
       // error: console.log(`\n Init(bytes) for now: ${init(bytes)}`)
-      console.log(`\n Individual Sighashes: ${contract.interface.getSighash(val)}`)
+      //console.log(`\n Individual Sighashes: ${contract.interface.getSighash(val)}`)
       acc.push(contract.interface.getSighash(val))      
     }
-    console.log(`\n Array variable Acc: ${acc}`)
+    //console.log(`\n Array variable Acc: ${acc}`)
     return acc
   }, [])
-  selectors.contract = contract
+
+  // selectors.remove & selectors.get: being used in Unit tests
+  selectors.contract = contract   // details of dot(.) operator - JS
   selectors.remove = remove   // remove some functionSelectors from the array corresponding to the array of funcSignatures
   selectors.get = get         // get functionSelectors from the array of corresponding funcSignatures
   console.log(`\n Selectors in the contract: ${selectors}`)
   console.log("--------------------------")
+
   return selectors
 }
 
@@ -49,7 +53,7 @@ const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 }    //inspired from IDia
   // ethers.utils.Fragment.from(func): this creates a new sub-class of type Fragment
 }
 
-// used with getSelectors to remove selectors from an array of selectors
+// used with getSelectors to remove selectors from an array of funcSign
 // functionNames argument is an array of function signatures
 // details - lo??
  function remove (functionNames) {

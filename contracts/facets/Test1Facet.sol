@@ -33,6 +33,7 @@ library TestLib {
 }
 
 // no need to import lib., it's right here
+// total 21 f() here
 contract Test1Facet {
     event TestEvent(address something);   // nowhere emitted
   // 2 f() with bodies (accessing lib.)

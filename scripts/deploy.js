@@ -36,6 +36,9 @@ async function deployDiamond () {
   // 2). Deploy all 3 facets and set the `facetCuts` array variable with 3 'keys'
   console.log('')
   console.log('Deploying facets \n')
+  
+  // we're setting the order of these facets inside FacetNames
+  // accorsdingly, index will be used to access them in the test
   const FacetNames = [
     'DiamondCutFacet',
     'DiamondLoupeFacet',

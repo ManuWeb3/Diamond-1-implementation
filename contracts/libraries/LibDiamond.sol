@@ -223,7 +223,7 @@ library LibDiamond {
 
             // entering target selector below gives me target struct # 1's element
             FacetAddressAndSelectorPosition memory oldFacetAddressAndSelectorPosition = ds.facetAddressAndSelectorPosition[selector];
-            // interesting way to check if function exists ? 
+            // interesting way to check if function exists thru address(0)? 
             // no need to loop thru any array, hence, save gas
             if(oldFacetAddressAndSelectorPosition.facetAddress == address(0)) {
                 revert CannotRemoveFunctionThatDoesNotExist(selector);
@@ -256,8 +256,11 @@ library LibDiamond {
             ds.selectors.pop();         // delete last selector (also works when same lastSelector got updated at indices # 1 and #3...) 
             // the case when above 'if' is true, the case when I want to remove selector @ index #1, not the last one)
 
-            // FINALLY, delete that mapping as well - a MUST
+            // FINALLY, delete that mapping as well that corresponds to struct instance 
+            // of orig. facetAddress + selector_position (index # 1) - a MUST 
             delete ds.facetAddressAndSelectorPosition[selector];
+            // nowhere we made use of the "address(0)" that we passed in this f() as a MUST arg.
+            // just checked @ start to revert, if i/p not address(0)
         }
     }
 

@@ -1,5 +1,10 @@
 /* global describe it before ethers */
 
+// No need to necessarily run cacheBugTest.js before running this test script
+// Why?
+// bcz here also, we're running deploy.js and returning 3 contract abst. of 3 std. facets
+
+// 4 imports = 3 f() + 1 custom-type (struct)
 const {
   getSelectors,
   FacetCutAction,
@@ -12,49 +17,73 @@ const { deployDiamond } = require('../scripts/deploy.js')
 const { assert } = require('chai')
 
 describe('DiamondTest', async function () {
-  let diamondAddress
+  let diamondAddress    // main
+  // 3 std. facets
   let diamondCutFacet
   let diamondLoupeFacet
   let ownershipFacet
+  // tx-related
   let tx
-  let receipt
+  let txReceipt
   let result
-  const addresses = []
+  
+  const addresses = []    
+  // to push addresses (1x1 - loop) of 3xfacets that got 'added' in the Diamond @ deployment using deploy.js
 
+  // Deploy Diamond, return its address, and return contract abst. of all 3 std. facets using Diamond-address
   before(async function () {
-    diamondAddress = await deployDiamond()
+    // all 5 S/C deployed contained in deploy.js
+    diamondAddress = await deployDiamond()    // all std. outputs will be displayed
+
+    // return instances of contract abstractions of 3 std. facets
     diamondCutFacet = await ethers.getContractAt('DiamondCutFacet', diamondAddress)
     diamondLoupeFacet = await ethers.getContractAt('DiamondLoupeFacet', diamondAddress)
     ownershipFacet = await ethers.getContractAt('OwnershipFacet', diamondAddress)
   })
-
-  it('should have three facets -- call to facetAddresses function', async () => {
+  // test # 1: application of Loupe()
+  it.only('should have three facets -- call to facetAddresses function', async () => {
+    // const threeFacetAddresses = await diamondLoupeFacet.facetAddresses()
     for (const address of await diamondLoupeFacet.facetAddresses()) {
-      addresses.push(address)
+      addresses.push(address)   // array of addresses only
     }
-
+    // array.length property (selectors.length): both for Solidity (LibDiamond) and JS
     assert.equal(addresses.length, 3)
   })
 
-  it('facets should have the right function selectors -- call to facetFunctionSelectors function', async () => {
+  // Test # 2: application of Loupe()
+  it.only('facets should have the right function selectors -- call to facetFunctionSelectors function', async () => {
+    // Facet # 1
+    // 'selectors' and 'result' are array types = sameMembers
+    // .sameMembers(set1, set2, [message])
+    // Asserts that set1 and set2 have the same members IN ANY ORDER. 
+    // Uses a strict equality check (===).
     let selectors = getSelectors(diamondCutFacet)
+    // console.log(`Facet @ addresses[0]: ${addresses[0]}`): error being thrown right here
+    // if it.only this test bcz addresses[] array does Not get populated
+    // bcz first unit test did not run at all
     result = await diamondLoupeFacet.facetFunctionSelectors(addresses[0])
-    assert.sameMembers(result, selectors)
+    assert.deepEqual(result, selectors, 'Members differ')
+    // .deepEqual(actual, expected, [message])
+    // bcz deepEqual works for mixed/any type, it DOES work for 2 array-types here (also patrick Github)
+
+    // Facet # 2
     selectors = getSelectors(diamondLoupeFacet)
     result = await diamondLoupeFacet.facetFunctionSelectors(addresses[1])
     assert.sameMembers(result, selectors)
+    // Facet # 3
     selectors = getSelectors(ownershipFacet)
     result = await diamondLoupeFacet.facetFunctionSelectors(addresses[2])
     assert.sameMembers(result, selectors)
   })
 
-  it('selectors should be associated to facets correctly -- multiple calls to facetAddress function', async () => {
+  // Test # 3 - not all 8 selectors got tested. Sample 4 tested
+  it.only('selectors should be associated to facets correctly -- multiple calls to facetAddress function', async () => {
     assert.equal(
-      addresses[0],
-      await diamondLoupeFacet.facetAddress('0x1f931c1c')
+      addresses[0], // DiamondCutFacet.sol
+      await diamondLoupeFacet.facetAddress('0x1f931c1c')  // selector hardcoded
     )
     assert.equal(
-      addresses[1],
+      addresses[1], // DiamondLoupeFacet.sol
       await diamondLoupeFacet.facetAddress('0xcdffacc6')
     )
     assert.equal(
@@ -62,29 +91,52 @@ describe('DiamondTest', async function () {
       await diamondLoupeFacet.facetAddress('0x01ffc9a7')
     )
     assert.equal(
-      addresses[2],
+      addresses[2], // OwnershipFacet.sol
       await diamondLoupeFacet.facetAddress('0xf2fde38b')
     )
   })
 
-  it('should add test1 functions', async () => {
+  // Test # 4
+  it.only('should add test1 functions', async () => {
+    // first, deploy Test1Facet.sol in 3-6-step
+    console.log("\nDeploying Test1Facet.sol")
     const Test1Facet = await ethers.getContractFactory('Test1Facet')
     const test1Facet = await Test1Facet.deploy()
     await test1Facet.deployed()
-    addresses.push(test1Facet.address)
+    console.log(`Test1facet.sol deployed at: ${test1Facet.address}`)
+
+    addresses.push(test1Facet.address)    // its address pushed to addresses[3]
+    
+    // invoked 'selectors.remove' as getSelectors() returns 'selectors' of Test1Facet.sol
+    // [funcSig-array] that's why '[' used inside remove()
+    // selector corrsp. to "supportsInterface" should be removed from the returned array of 'selectors' of Test1Facet
+    // and save to L.H.S selectors
+    // here, console.log(all selectors returned from getSelectors - its script) + then remove exec.
     const selectors = getSelectors(test1Facet).remove(['supportsInterface(bytes4)'])
+    // Adding Test1Facet to Diamond.sol
+    // 3-step diamondCut() tx
     tx = await diamondCutFacet.diamondCut(
-      [{
+      [   // array of struct instances
+        { // 1 such struct instance
         facetAddress: test1Facet.address,
         action: FacetCutAction.Add,
-        functionSelectors: selectors
-      }],
-      ethers.constants.AddressZero, '0x', { gasLimit: 800000 })
-    receipt = await tx.wait()
-    if (!receipt.status) {
+        functionSelectors: selectors    // all 20 selectors sans supportsInterface (0x01ffc9a7)
+        }
+      ],
+      ethers.constants.AddressZero, 
+      '0x', 
+      { gasLimit: 800000 })
+
+    txReceipt = await tx.wait()
+
+    if (!txReceipt.status) {
       throw Error(`Diamond upgrade failed: ${tx.hash}`)
     }
-    result = await diamondLoupeFacet.facetFunctionSelectors(test1Facet.address)
+
+    result = await diamondLoupeFacet.facetFunctionSelectors(test1Facet.address) // i/p is address type
+    // TILL now, getSelectors() => 'selectors' ...
+    // & diamondLoupeFacet.facetFunctionSelectors() => 'result'
+    // ALWAYS, for "assert"
     assert.sameMembers(result, selectors)
   })
 
@@ -104,8 +156,8 @@ describe('DiamondTest', async function () {
         functionSelectors: selectors
       }],
       ethers.constants.AddressZero, '0x', { gasLimit: 800000 })
-    receipt = await tx.wait()
-    if (!receipt.status) {
+    txReceipt = await tx.wait()
+    if (!txReceipt.status) {
       throw Error(`Diamond upgrade failed: ${tx.hash}`)
     }
     result = await diamondLoupeFacet.facetFunctionSelectors(testFacetAddress)
@@ -125,8 +177,8 @@ describe('DiamondTest', async function () {
         functionSelectors: selectors
       }],
       ethers.constants.AddressZero, '0x', { gasLimit: 800000 })
-    receipt = await tx.wait()
-    if (!receipt.status) {
+    txReceipt = await tx.wait()
+    if (!txReceipt.status) {
       throw Error(`Diamond upgrade failed: ${tx.hash}`)
     }
     result = await diamondLoupeFacet.facetFunctionSelectors(test2Facet.address)
@@ -144,8 +196,8 @@ describe('DiamondTest', async function () {
         functionSelectors: selectors
       }],
       ethers.constants.AddressZero, '0x', { gasLimit: 800000 })
-    receipt = await tx.wait()
-    if (!receipt.status) {
+    txReceipt = await tx.wait()
+    if (!txReceipt.status) {
       throw Error(`Diamond upgrade failed: ${tx.hash}`)
     }
     result = await diamondLoupeFacet.facetFunctionSelectors(addresses[4])
@@ -163,8 +215,8 @@ describe('DiamondTest', async function () {
         functionSelectors: selectors
       }],
       ethers.constants.AddressZero, '0x', { gasLimit: 800000 })
-    receipt = await tx.wait()
-    if (!receipt.status) {
+    txReceipt = await tx.wait()
+    if (!txReceipt.status) {
       throw Error(`Diamond upgrade failed: ${tx.hash}`)
     }
     result = await diamondLoupeFacet.facetFunctionSelectors(addresses[3])
@@ -185,8 +237,8 @@ describe('DiamondTest', async function () {
         functionSelectors: selectors
       }],
       ethers.constants.AddressZero, '0x', { gasLimit: 800000 })
-    receipt = await tx.wait()
-    if (!receipt.status) {
+    txReceipt = await tx.wait()
+    if (!txReceipt.status) {
       throw Error(`Diamond upgrade failed: ${tx.hash}`)
     }
     facets = await diamondLoupeFacet.facets()
@@ -226,8 +278,8 @@ describe('DiamondTest', async function () {
       }
     ]
     tx = await diamondCutFacet.diamondCut(cut, ethers.constants.AddressZero, '0x', { gasLimit: 8000000 })
-    receipt = await tx.wait()
-    if (!receipt.status) {
+    txReceipt = await tx.wait()
+    if (!txReceipt.status) {
       throw Error(`Diamond upgrade failed: ${tx.hash}`)
     }
     const facets = await diamondLoupeFacet.facets()

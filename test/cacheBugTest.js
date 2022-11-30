@@ -58,6 +58,8 @@ describe('Cache bug test', async () => {    // no need for async
     ]
 
     // all 5 S/C compiled and deployed here, below
+
+    // below, the control shifts to exec the deploy.js
     let diamondAddress = await deployDiamond()  // only value returned by this f() in deploy.js
     // get below 2 contracts' deployed instances - abstraction objects
     let diamondCutFacet = await ethers.getContractAt('DiamondCutFacet', diamondAddress)
@@ -79,6 +81,7 @@ describe('Cache bug test', async () => {    // no need for async
     // add functions
     // '(' for diamondCut()
     // inside it, '[' for array (if any) along with '{' for individual struct instance
+    console.log("Adding selectors")
     tx = await diamondCutFacet.diamondCut([
     // below 1 3-element-set corresponds to 1 instance of _diamondCut array of struct FacetCut[] type
       { 
@@ -116,14 +119,22 @@ describe('Cache bug test', async () => {    // no need for async
       sel5,
       sel10
     ]
+    // 3-step process of tx, receipt, status-check
+    console.log("Removing selectors")
     tx = await diamondCutFacet.diamondCut([
       {
-        facetAddress: ethers.constants.AddressZero,
+        facetAddress: ethers.constants.AddressZero,   // as per implementation od d-1-hh
+        // nowhere did I see this as a MUST in the ERC2535 std.
         action: FacetCutAction.Remove,
         functionSelectors: selectors
       }
-    ], ethers.constants.AddressZero, '0x', { gasLimit: 800000 })
+    ], 
+    ethers.constants.AddressZero, 
+    '0x', 
+    { gasLimit: 800000 })
+
     txReceipt = await tx.wait()
+
     if (!txReceipt.status) {
       throw Error(`Diamond upgrade failed: ${tx.hash}`)
     }
@@ -133,10 +144,18 @@ describe('Cache bug test', async () => {    // no need for async
   // Test for Cache Bug now
   // async
   it('should not exhibit the cache bug', async () => {
-    // Get the test1Facet's registered functions
+    // Get the test1Facet's 20 registered functions, using Loupe f()
+    // we used JS to retrieve these selectors: off-chain, no worries for gas cost
+    // on-chain when called from within a S/C.
+    // off-chain like this, instansiated contract abst. in JS and called the f()
     let selectors = await diamondLoupeFacet.facetFunctionSelectors(test1Facet.address)
 
-    // Check individual correctness
+    // Check individual correctness for selectors
+    // WE'RE CHECKING ONLY WHETHER THIS SELECTOR IS PRESENT IN THE MAPPING, not in real Test1facet.sol
+    
+    // isTrue(value, [message]): message is optional
+    // Asserts that value is true.
+    // else revert with the msg. string
     assert.isTrue(selectors.includes(sel0), 'Does not contain sel0') 
     // "sel0" = test1Func1() = TestLib.setMyAddress(address(this));
     assert.isTrue(selectors.includes(sel1), 'Does not contain sel1')
@@ -147,7 +166,9 @@ describe('Cache bug test', async () => {    // no need for async
     assert.isTrue(selectors.includes(sel7), 'Does not contain sel7')
     assert.isTrue(selectors.includes(sel8), 'Does not contain sel8')
     assert.isTrue(selectors.includes(sel9), 'Does not contain sel9')
-
+    // .isFalse(value, [message])
+    // Asserts that value is false.
+    // else revert with the msg. string
     assert.isFalse(selectors.includes(ownerSel), 'Contains ownerSel')
     // ownerSel in slot 0
     assert.isFalse(selectors.includes(sel10), 'Contains sel10')
