@@ -9,6 +9,7 @@ pragma solidity ^0.8.0;
 /******************************************************************************/
 import { IDiamond } from "../interfaces/IDiamond.sol";
 import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
+import "hardhat/console.sol";
 
 // Remember to add the loupe functions from DiamondLoupeFacet to the diamond.
 // The loupe functions are required by the EIP2535 Diamonds standard
@@ -180,12 +181,16 @@ library LibDiamond {
         if(_facetAddress == address(0)) {
             revert CannotReplaceFunctionsFromFacetWithZeroAddress(_functionSelectors);
         }
-        // if it exists, is it a code
+        // if address exists, does it have a code
         enforceHasContractCode(_facetAddress, "LibDiamondCut: Replace facet has no code");
         
         for (uint256 selectorIndex; selectorIndex < _functionSelectors.length; selectorIndex++) {
             bytes4 selector = _functionSelectors[selectorIndex];
             address oldFacetAddress = ds.facetAddressAndSelectorPosition[selector].facetAddress;
+            console.log("\nOldFacetAddress:");
+            console.log(oldFacetAddress);
+            console.log("\nInput facet Address");
+            console.log(_facetAddress);
             // can't replace immutable functions -- functions defined directly in the diamond in this case
             
             // Library's f() are immutable

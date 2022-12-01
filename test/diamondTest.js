@@ -114,7 +114,7 @@ describe('DiamondTest', async function () {
   })
 
   // Test # 4
-  it.only('should add test1 functions', async () => {
+  it.only('should add test1 functions: JS-remove-supportsInterface(bytes4)', async () => {
     // first, deploy Test1Facet.sol in 3-6-step
     console.log("\nDeploying Test1Facet.sol")
     const Test1Facet = await ethers.getContractFactory('Test1Facet')
@@ -169,48 +169,87 @@ describe('DiamondTest', async function () {
     */
   })
 
-  // Test # 6
-  it('should replace supportsInterface function', async () => {
-    // we're redeploying Test1Facet here
+  // Test # 6 - Diagramatic explanation of this test & REPLACE() in notebook @ Nov. 30
+  it.only('should [diamondCut(Replace)] replace supportsInterface function', async () => {
+    console.log("\nTest # 6")
+    // we're re-deploying Test1Facet here
     const Test1Facet = await ethers.getContractFactory('Test1Facet')
+    // out of the 21 selectors returned here, we "get" our target selector out of it
+    // "ContractFactory" can also be used as an input here
+    // taken as: contractFactory.interface.functions in actual body of getSelectors()
+    // contractFactory.interface: Interface (ABI), then Interface.functions: array<functionFragments>
+    // contract.interface: Interface (ABI), then, --------ditto-------------
+    // that's why "keys" (funcSig) of all of those f() are being returned by Object.keys()
+    // despite JS-removed above, supportsInterface still hardcoded/present in Test1Facet...
+    // hence gettable here
     const selectors = getSelectors(Test1Facet).get(['supportsInterface(bytes4)'])
-    const testFacetAddress = addresses[3]
+    console.log(`\n'selectors' after get() executed: ${selectors}`)
+    // input is an array of f() Signatures and get()'s Sighash will return its selector
+    const testFacetAddress = addresses[3]   
+    // contains address of Test1Facet, pushed into addresses aray in test # 4
+    console.log(`\nTestFacetAddress (Test1Facet-same?): ${testFacetAddress}`)
+    
+    // 3-step tx thing
     tx = await diamondCutFacet.diamondCut(
-      [{
+      [ //array
+        { // 1st struct-type member (index = 0) of this array
         facetAddress: testFacetAddress,
         action: FacetCutAction.Replace,
-        functionSelectors: selectors
-      }],
-      ethers.constants.AddressZero, '0x', { gasLimit: 800000 })
+        functionSelectors: selectors    // 0x01ffc9a7 = getSighash('supportsInterface(bytes4)')
+        }
+      ],
+      ethers.constants.AddressZero, 
+      '0x', 
+      { gasLimit: 800000 })
+
     txReceipt = await tx.wait()
+
     if (!txReceipt.status) {
       throw Error(`Diamond upgrade failed: ${tx.hash}`)
     }
+    // Replace: same f() selector present in a different S/C replaces the one alrerady existing in Diamond's mapping
+    // (re-pointed/updated) mappings are read by diamondLoupeFacet, NOT JS script
+    // now after replacing happens thru diamondCut(), its mapping has 21 f() of Test1Facet (earlier 20)
     result = await diamondLoupeFacet.facetFunctionSelectors(testFacetAddress)
+    // "testFacetAddress" is another name of address where Test1Facet is deployed (= addresses[3])
+    console.log(`\nResult (result) of test # 6 (replace): ${result}`)
+    // JS script reads methods hardcoded in the facet, 21 f()
     assert.sameMembers(result, getSelectors(Test1Facet))
   })
 
+  // Test # 7
   it('should add test2 functions', async () => {
     const Test2Facet = await ethers.getContractFactory('Test2Facet')
     const test2Facet = await Test2Facet.deploy()
     await test2Facet.deployed()
+
     addresses.push(test2Facet.address)
+
     const selectors = getSelectors(test2Facet)
+
     tx = await diamondCutFacet.diamondCut(
-      [{
+      [
+        {
         facetAddress: test2Facet.address,
         action: FacetCutAction.Add,
         functionSelectors: selectors
-      }],
-      ethers.constants.AddressZero, '0x', { gasLimit: 800000 })
+        }
+      ],
+      ethers.constants.AddressZero, 
+      '0x', 
+      { gasLimit: 800000 })
+
     txReceipt = await tx.wait()
+
     if (!txReceipt.status) {
       throw Error(`Diamond upgrade failed: ${tx.hash}`)
     }
+
     result = await diamondLoupeFacet.facetFunctionSelectors(test2Facet.address)
-    assert.sameMembers(result, selectors)
+    assert.sameMembers(result, selectors, 'Members differ')
   })
 
+  // Test # 8
   it('should remove some test2 functions', async () => {
     const test2Facet = await ethers.getContractAt('Test2Facet', diamondAddress)
     const functionsToKeep = ['test2Func1()', 'test2Func5()', 'test2Func6()', 'test2Func19()', 'test2Func20()']
@@ -249,7 +288,7 @@ describe('DiamondTest', async function () {
     assert.sameMembers(result, getSelectors(test1Facet).get(functionsToKeep))
   })
 
-  it('remove all functions and facets accept \'diamondCut\' and \'facets\'', async () => {
+  it('remove all functions and facets except \'diamondCut\' and \'facets\'', async () => {
     let selectors = []
     let facets = await diamondLoupeFacet.facets()
     for (let i = 0; i < facets.length; i++) {

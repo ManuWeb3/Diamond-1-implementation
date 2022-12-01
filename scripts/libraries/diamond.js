@@ -9,7 +9,7 @@ const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 }    //inspired from IDia
 // ALL NOTES reg. new f() of JS/ethers.js @ NOV 27 - notebook
 // IMPORTANCE of getSelectors: Unit test
 // use viz-a-viz "diamondLoupeFacet.facetFunctionSelectors(addresses[2])"
- function getSelectors (contract) {
+ function getSelectors (contract) {   // OR "ContractFactory" input also works - unit test # 6
   // Object.keys(object): returns 'key(s)' part of the key-value pair inside array (index) / JSON obj. {keys}
   // console.log(`\n contract.interface.functions: \n ${JSON.stringify(contract.interface.functions)}`)
   const signatures = Object.keys(contract.interface.functions)
@@ -75,16 +75,21 @@ const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 }    //inspired from IDia
   return selectors
 }
 
+// get() will be used in uit tests
 // used with getSelectors to get selectors from an array of selectors
 // functionNames argument is an array of function signatures
  function get (functionNames) {
   const selectors = this.filter((v) => {
+    // if true returned, then the selector (that caused true) is returned by .filter()
     for (const functionName of functionNames) {
       if (v === this.contract.interface.getSighash(functionName)) {   // looping var 'functionName'
+        console.log(`\nValue of (v): ${v}`)
         return true   // if any matched (present = gettable)
+        // this 'return' corresponds to "(v) => {", which is a f() body defined inside filter()
       }
     }
     return false      // if None matched (absent = non-gettable)
+    // this 'return' corresponds to "(v) => {", which is a f() body defined inside filter()
   })
   // after all funcSelectors iterated thru, below will exec.
   selectors.contract = this.contract
@@ -93,6 +98,7 @@ const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 }    //inspired from IDia
   // filtered selectors returned
   console.log(`Filerted Selectors (get): ${selectors}`)
   return selectors
+  // this return is get()'s return, not return of "(v) => {"
 }
 
 // remove selectors using an array of signatures - details ??
