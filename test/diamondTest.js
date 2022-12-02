@@ -2,9 +2,15 @@
 
 // 11 Unit tests for now
 
+// Optional:
+// To check whether diamondCut() exec correctly, we can also include event-listening for DiamondCut event...
+// before assert (though assert does the real test)
+
 // No need to necessarily run cacheBugTest.js before running this test script
 // Why?
 // bcz here also, we're running deploy.js and returning 3 contract abst. of 3 std. facets
+
+// DiamondInit/ 2nd & 3rd arg. of diamondCut() NOT tested among below 12 unit tests, for now.
 
 // 4 imports = 3 f() + 1 custom-type (struct)
 const {
@@ -17,6 +23,7 @@ const {
 const { deployDiamond } = require('../scripts/deploy.js')
 
 const { assert } = require('chai')
+const { ethers } = require('hardhat')
 
 describe('DiamondTest', async function () {
   let diamondAddress    // main
@@ -132,6 +139,7 @@ describe('DiamondTest', async function () {
     const selectors = getSelectors(test1Facet).remove(['supportsInterface(bytes4)'])
     // Adding Test1Facet to Diamond.sol
     // 3-step diamondCut() tx
+    console.log("Adding Test1Facet and its f() using diamondCut()")
     tx = await diamondCutFacet.diamondCut(
       [   // array of struct instances
         { // 1 such struct instance
@@ -190,6 +198,7 @@ describe('DiamondTest', async function () {
     console.log(`\nTestFacetAddress (Test1Facet-same?): ${testFacetAddress}`)
     
     // 3-step tx thing
+    console.log("Replacing supportsInterface(bytes4) using diamondCut()")
     tx = await diamondCutFacet.diamondCut(
       [ //array
         { // 1st struct-type member (index = 0) of this array
@@ -218,15 +227,20 @@ describe('DiamondTest', async function () {
   })
 
   // Test # 7
-  it('should add test2 functions', async () => {
+  it.only('should add test2 functions', async () => {
+    // 3-6-step deployment
+    console.log(`Deploying Test2Facet.sol`)
     const Test2Facet = await ethers.getContractFactory('Test2Facet')
     const test2Facet = await Test2Facet.deploy()
     await test2Facet.deployed()
-
+    console.log(`\nDeployed Test2Facet at: ${test2Facet.address}`)
+    console.log(`------------------------`)
+    // pushing its address at index # 4 in addresses-array (after 3xstd. facets + 1xTest1Facet)
     addresses.push(test2Facet.address)
-
+    // JS getSelectors() can be run anytime
     const selectors = getSelectors(test2Facet)
-
+    // 3-step tx process
+    console.log("\nAdding Test2Facet and its f() using diamondCut()")
     tx = await diamondCutFacet.diamondCut(
       [
         {
@@ -244,76 +258,147 @@ describe('DiamondTest', async function () {
     if (!txReceipt.status) {
       throw Error(`Diamond upgrade failed: ${tx.hash}`)
     }
-
+    // Loupe f() can only test after diamondCut() exec to Add/Replace/Remove
+    // bcz then only that mapping gets updated
     result = await diamondLoupeFacet.facetFunctionSelectors(test2Facet.address)
     assert.sameMembers(result, selectors, 'Members differ')
   })
 
   // Test # 8
-  it('should remove some test2 functions', async () => {
+  it.only("Should call a function in Test2Facet after getting added in Diamond", async () => {
+    const test2Facet = await ethers.getContractAt("Test2Facet", diamondAddress)
+    const tx = await test2Facet.test2Func1() 
+    /* Some tests without asserts as well
+    const txReceipt = await tx.wait()
+    console.log(`\nTransaction Receipt: ${JSON.stringify(txReceipt)}`)
+    */
+  })
+
+  // Test # 9
+  it.only('should remove some test2 functions', async () => {
     const test2Facet = await ethers.getContractAt('Test2Facet', diamondAddress)
+    // array of funcSigs, needs to passed in .get(functionNames)
+    // later on selectors returned from Sigs using getSighash() there itself
     const functionsToKeep = ['test2Func1()', 'test2Func5()', 'test2Func6()', 'test2Func19()', 'test2Func20()']
+    // below 'selectors' have all 15 f() of test2Facet except above 5 f(), as returned by .remove()
+    // SEE how .remove() has been smartly put to use here
     const selectors = getSelectors(test2Facet).remove(functionsToKeep)
+    // 3-step tx
+    console.log("\nRemoving 15 f() of Test2Facet using diamondCut()")
     tx = await diamondCutFacet.diamondCut(
-      [{
+      [ // array of satruct instances
+        { // only 1 struct instancxe for now
         facetAddress: ethers.constants.AddressZero,
         action: FacetCutAction.Remove,
-        functionSelectors: selectors
-      }],
-      ethers.constants.AddressZero, '0x', { gasLimit: 800000 })
+        functionSelectors: selectors    // 15 selectros going to get removed
+        }
+      ],
+      ethers.constants.AddressZero, 
+      '0x', 
+      { gasLimit: 800000 })
+
     txReceipt = await tx.wait()
+
     if (!txReceipt.status) {
       throw Error(`Diamond upgrade failed: ${tx.hash}`)
     }
+    // AFTER UPDRAGE, LOUPE() WILL BE USED
+    // to test what all Test2Facet f() are present in the Diamond
     result = await diamondLoupeFacet.facetFunctionSelectors(addresses[4])
+    // result has above 5 f() = FunctionsToKeep
+    // SEE how .get() has been smartly put to use here
     assert.sameMembers(result, getSelectors(test2Facet).get(functionsToKeep))
   })
 
-  it('should remove some test1 functions', async () => {
+  // Test # 10
+  it.only('should remove some test1 functions', async () => {
     const test1Facet = await ethers.getContractAt('Test1Facet', diamondAddress)
+
     const functionsToKeep = ['test1Func2()', 'test1Func11()', 'test1Func12()']
+    // selectors below has 18 f() out of all 21 f() in Test1Facet
     const selectors = getSelectors(test1Facet).remove(functionsToKeep)
+    // 3-step tx: UPGRADE Process
+    console.log("\nRemoving 18 f() of Test1Facet using diamondCut()")
     tx = await diamondCutFacet.diamondCut(
-      [{
+      [ // array
+        { // struct instance # 1
         facetAddress: ethers.constants.AddressZero,
         action: FacetCutAction.Remove,
-        functionSelectors: selectors
-      }],
-      ethers.constants.AddressZero, '0x', { gasLimit: 800000 })
+        functionSelectors: selectors    // 18 selectors going to get removed
+        }
+      ],
+      ethers.constants.AddressZero, 
+      '0x', 
+      { gasLimit: 800000 })
+
     txReceipt = await tx.wait()
+
     if (!txReceipt.status) {
       throw Error(`Diamond upgrade failed: ${tx.hash}`)
     }
+    // test1facet already stored at addresses[3]
+    // result has 3 f()
+    // AFTER UPDRAGE, LOUPE() WILL BE USED
+    // to test what all Test2Facet f() are present in the Diamond
     result = await diamondLoupeFacet.facetFunctionSelectors(addresses[3])
+    // Smart usage of .get()
     assert.sameMembers(result, getSelectors(test1Facet).get(functionsToKeep))
   })
 
-  it('remove all functions and facets except \'diamondCut\' and \'facets\'', async () => {
-    let selectors = []
-    let facets = await diamondLoupeFacet.facets()
-    for (let i = 0; i < facets.length; i++) {
+  // Test # 11: 1XdiamondCut() and 3X std. Facets
+  // INFO: 1. removal of f() will inevitably remove the facets-entries from the struct#1, per REMOVE() code (las line)
+  // 2. 14 will be removed out of 16 f(), calc. below
+  it.only('remove all functions and facets except \'diamondCut\' and \'facets\'', async () => {
+    let selectors = []  // init to zero-value array
+    // get all 5 (3 std. facets + 2 test facets) facets for now
+    let facets = await diamondLoupeFacet.facets() // no need to init to zero-value array... 
+    // passing on an actual value = 5
+    for (let i = 0; i < facets.length; i++) { // 0 - 4
+      // returning all the selectors = 1+5+2+3(21)+5(20) = 16(49) in all
+      // Spread syntax (...)
       selectors.push(...facets[i].functionSelectors)
+      // expands all selectors contained inside this facet[i] and pushes to 'selectors'
     }
+    // filter/remove facets() and diamondCut() from 'selectors' and returned the filtered array
     selectors = removeSelectors(selectors, ['facets()', 'diamondCut(tuple(address,uint8,bytes4[])[],address,bytes)'])
+    // 14 selectors will return above
+
+    // 3-step tx = remove
+    console.log("\nRemoving selectos using diamondCut()")
+
     tx = await diamondCutFacet.diamondCut(
-      [{
+      [   // array of struct
+        { // 1st element of struct array
         facetAddress: ethers.constants.AddressZero,
         action: FacetCutAction.Remove,
-        functionSelectors: selectors
-      }],
-      ethers.constants.AddressZero, '0x', { gasLimit: 800000 })
+        functionSelectors: selectors    // 14 selectors to be removed out of 16 right now
+        }
+      ],
+      ethers.constants.AddressZero, 
+      '0x', 
+      { gasLimit: 800000 })
+
     txReceipt = await tx.wait()
+
     if (!txReceipt.status) {
       throw Error(`Diamond upgrade failed: ${tx.hash}`)
     }
+    // facets() runs bcz still present in Diamond
+    // 2 facets should be there: DLoupeF, DCutF
     facets = await diamondLoupeFacet.facets()
+    console.log(`\nRemaining facets: ${facets}`)
     assert.equal(facets.length, 2)
-    assert.equal(facets[0][0], addresses[0])
+    // for DiamondCutFacet at addresses[0]
+    assert.equal(facets[0][0], addresses[0])      // 2-D array ??
+    // for diamondCut((address,uint8,bytes4[])[],address,bytes) - sans 'tuple'
     assert.sameMembers(facets[0][1], ['0x1f931c1c'])
+    // for DiamondLoupeFacet at addresses[1]
     assert.equal(facets[1][0], addresses[1])
+    // for facets()
     assert.sameMembers(facets[1][1], ['0x7a0ed627'])
   })
 
+  // Test # 12  
   it('add most functions and facets', async () => {
     const diamondLoupeFacetSelectors = getSelectors(diamondLoupeFacet).remove(['supportsInterface(bytes4)'])
     const Test1Facet = await ethers.getContractFactory('Test1Facet')

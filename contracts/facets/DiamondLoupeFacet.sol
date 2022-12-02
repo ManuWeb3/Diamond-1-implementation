@@ -62,11 +62,11 @@ contract DiamondLoupeFacet is IDiamondLoupe, IERC165 {
             // using 'selectorIndex (position)',retrieve 1st selector and its resp. facet address
             // below 2 (ds.1 and ds.2) are accessible as we imported LibDiamond.sol here
             bytes4 selector = ds.selectors[selectorIndex];
-            console.log("Selector:");
+            console.log("\nSelector:");
             console.logBytes4(selector);
             
             address facetAddress_ = ds.facetAddressAndSelectorPosition[selector].facetAddress;
-            console.log("facetAddress:");
+            console.log("\nfacetAddress:");
             console.logAddress(facetAddress_);
             // loop ops. start--------------------
             bool continueLoop = false;
@@ -74,20 +74,20 @@ contract DiamondLoupeFacet is IDiamondLoupe, IERC165 {
             // 1st nested loop under 1st fresh loop
             for (uint256 facetIndex; facetIndex < numFacets; facetIndex++) {
                 // DEFINITELY, facets_ has afcetAddresses till this if{}, else always false
-                console.log("Comparing facetAddress with the struct's below:");
+                console.log("\nComparing facetAddress with the struct's below:");
                 console.log(facets_[facetIndex].facetAddress);
                 if (facets_[facetIndex].facetAddress == facetAddress_) { // 1st iteration: address @ 0 = add.
-                    console.log("numFacetSelectors[facetIndex]");
+                    console.log("\nnumFacetSelectors[facetIndex]");
                     console.log(numFacetSelectors[facetIndex]);
 
                     facets_[facetIndex].functionSelectors[numFacetSelectors[facetIndex]] = selector;
                     // added 1st selector at 0+0 index of functionSelectors array                               
-                    console.log("numFacetSelectors[facetIndex]++");
+                    console.log("\nnumFacetSelectors[facetIndex]++");
                     console.log(numFacetSelectors[facetIndex]++);
                     numFacetSelectors[facetIndex]++;
 
                     continueLoop = true;
-                    console.log("Going to break the nested loop");
+                    console.log("\nGoing to break the nested loop");
                     break;
                 }
             } // nested loop ends here
@@ -98,13 +98,13 @@ contract DiamondLoupeFacet is IDiamondLoupe, IERC165 {
             // We already assigned selector to it in the nested loop
             if (continueLoop) {
                 continueLoop = false;
-                console.log("Going to continue the loop, inside continueLoop-if struct");
+                console.log("\nGoing to continue the loop, inside continueLoop-if struct");
                 continue;
             } // continue @ 1st fresh loop (not nested one). Below code won't execute
 
             // Nick: create a new functionSelectors array for selector... 
             // bcz functionSelectors array did not exist for this selector (unlike above * comment)
-            console.log("Executing last 5 lines below:");
+            console.log("\nExecuting last 5 lines below:");
             facets_[numFacets].facetAddress = facetAddress_;
             facets_[numFacets].functionSelectors = new bytes4[](selectorCount);
             facets_[numFacets].functionSelectors[0] = selector;
@@ -113,11 +113,11 @@ contract DiamondLoupeFacet is IDiamondLoupe, IERC165 {
         }   // 1st fresh loop ends here
         
         // 2nd fresh loop
-        console.log("2nd fresh loop starts below");
+        console.log("\n2nd fresh loop starts below");
         for (uint256 facetIndex; facetIndex < numFacets; facetIndex++) {
-            console.log("No. of selectors inside facet");
+            console.log("\nNo. of selectors inside facet");
             uint256 numSelectors = numFacetSelectors[facetIndex];
-            console.log("Assigning all those selectors to the selectors-array");
+            console.log("\nAssigning all those selectors to the selectors-array");
             bytes4[] memory selectors = facets_[facetIndex].functionSelectors;
             // setting the number of selectors ??
             assembly {

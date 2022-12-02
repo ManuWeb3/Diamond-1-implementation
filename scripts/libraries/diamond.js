@@ -72,18 +72,21 @@ const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 }    //inspired from IDia
   selectors.get = this.get
   // filtered selectors returned
   console.log(`Filerted Selectors (remove): ${selectors}`)
+  console.log("--------------------------")
   return selectors
 }
 
 // get() will be used in uit tests
 // used with getSelectors to get selectors from an array of selectors
 // functionNames argument is an array of function signatures
+// as used in Test # 9
  function get (functionNames) {
   const selectors = this.filter((v) => {
     // if true returned, then the selector (that caused true) is returned by .filter()
     for (const functionName of functionNames) {
       if (v === this.contract.interface.getSighash(functionName)) {   // looping var 'functionName'
         console.log(`\nValue of (v): ${v}`)
+        // (v) ultimately has the value of selectors in it
         return true   // if any matched (present = gettable)
         // this 'return' corresponds to "(v) => {", which is a f() body defined inside filter()
       }
@@ -96,20 +99,32 @@ const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 }    //inspired from IDia
   selectors.remove = this.remove
   selectors.get = this.get
   // filtered selectors returned
-  console.log(`Filerted Selectors (get): ${selectors}`)
+  console.log(`\nFilerted Selectors (get): ${selectors}`)
   return selectors
   // this return is get()'s return, not return of "(v) => {"
 }
 
-// remove selectors using an array of signatures - details ??
+// remove selectors using an array of signatures
+// 'signatures' arg. => interface => getSighash => selectors-to-be-kept out of passed in 'selectors'
+// remove rest all
+// selectors = 16, signatures = 2 = removeSelectors below
  function removeSelectors (selectors, signatures) {
-  console.log(`Signatures as an arg.: ${signatures}`)
+  console.log(`\nSignatures as an arg.: ${signatures}`)
+  // seems like "function" is prepended to 2xpassed args. [facets() and diamondCut()]
+  // and created an interface out of those passed args. (basically functions only)
+  // iface is interface of 2 f()
+  // to create an interface, we had to prepend the 'function' keyword + a space with passed in arg.
+  // https://docs.ethers.io/v5/api/utils/abi/interface/
+  // link to see how an interface gets created out of all f()Sigs passed to Interface()
   const iface = new ethers.utils.Interface(signatures.map(v => 'function ' + v))
   // .map() creates a new array by calling a f() for every element in the orig. array by exec that f() only once per element
+  // each of the passed arg. in signatures get Sighashed to selector, gets returned
   const removeSelectors = signatures.map(v => iface.getSighash(v))
+  // 'removeSelectors' has both the passed in args.
+  // 14 selectors filtered here
   selectors = selectors.filter(v => !removeSelectors.includes(v))
-  console.log(`Selectors as return var.: ${selectors}`)
-  return selectors
+  console.log(`\nFiltered selectors as return var. of removeSelectors(): ${selectors}`)
+  return selectors  // 14 selectors
 }
 
 // find a particular address' position in the ('factes' array) return value of diamondLoupeFacet.facets()
