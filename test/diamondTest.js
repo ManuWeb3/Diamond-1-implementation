@@ -53,7 +53,7 @@ describe('DiamondTest', async function () {
     ownershipFacet = await ethers.getContractAt('OwnershipFacet', diamondAddress)
   })
   // test # 1: application of Loupe()
-  it.only('should have three facets -- call to facetAddresses function', async () => {
+  it('should have three facets -- call to facetAddresses function', async () => {
     // const threeFacetAddresses = await diamondLoupeFacet.facetAddresses()
     for (const address of await diamondLoupeFacet.facetAddresses()) {
       addresses.push(address)   // array of addresses only
@@ -63,7 +63,7 @@ describe('DiamondTest', async function () {
   })
 
   // Test # 2: application of Loupe()
-  it.only('facets should have the right function selectors -- call to facetFunctionSelectors function', async () => {
+  it('facets should have the right function selectors -- call to facetFunctionSelectors function', async () => {
     // Facet # 1
     // 'selectors' and 'result' are array types = sameMembers
     // .sameMembers(set1, set2, [message])
@@ -101,7 +101,7 @@ describe('DiamondTest', async function () {
   })
 
   // Test # 3 - not all 8 selectors got tested. Sample 4 tested
-  it.only('selectors should be associated to facets correctly -- multiple calls to facetAddress function', async () => {
+  it('selectors should be associated to facets correctly -- multiple calls to facetAddress function', async () => {
     assert.equal(
       addresses[0], // DiamondCutFacet.sol
       await diamondLoupeFacet.facetAddress('0x1f931c1c')  // selector hardcoded
@@ -121,7 +121,7 @@ describe('DiamondTest', async function () {
   })
 
   // Test # 4
-  it.only('should add test1 functions: JS-remove-supportsInterface(bytes4)', async () => {
+  it('should add test1 functions: JS-remove-supportsInterface(bytes4)', async () => {
     // first, deploy Test1Facet.sol in 3-6-step
     console.log("\nDeploying Test1Facet.sol")
     const Test1Facet = await ethers.getContractFactory('Test1Facet')
@@ -166,7 +166,7 @@ describe('DiamondTest', async function () {
   })
 
   // Test # 5
-  it.only('should test function call of Test1Facet at Diamond-address', async () => {
+  it('should test function call of Test1Facet at Diamond-address', async () => {
     // "diamondAddress" will work here bcz Test1Facet has been added using diamondCut()
     // test1Facet is an instance of its contract_abstraction
     const test1Facet = await ethers.getContractAt('Test1Facet', diamondAddress)
@@ -178,7 +178,7 @@ describe('DiamondTest', async function () {
   })
 
   // Test # 6 - Diagramatic explanation of this test & REPLACE() in notebook @ Nov. 30
-  it.only('should [diamondCut(Replace)] replace supportsInterface function', async () => {
+  it('should [diamondCut(Replace)] replace supportsInterface function', async () => {
     console.log("\nTest # 6")
     // we're re-deploying Test1Facet here
     const Test1Facet = await ethers.getContractFactory('Test1Facet')
@@ -227,7 +227,7 @@ describe('DiamondTest', async function () {
   })
 
   // Test # 7
-  it.only('should add test2 functions', async () => {
+  it('should add test2 functions', async () => {
     // 3-6-step deployment
     console.log(`Deploying Test2Facet.sol`)
     const Test2Facet = await ethers.getContractFactory('Test2Facet')
@@ -265,7 +265,7 @@ describe('DiamondTest', async function () {
   })
 
   // Test # 8
-  it.only("Should call a function in Test2Facet after getting added in Diamond", async () => {
+  it("Should call a function in Test2Facet after getting added in Diamond", async () => {
     const test2Facet = await ethers.getContractAt("Test2Facet", diamondAddress)
     const tx = await test2Facet.test2Func1() 
     /* Some tests without asserts as well
@@ -275,7 +275,7 @@ describe('DiamondTest', async function () {
   })
 
   // Test # 9
-  it.only('should remove some test2 functions', async () => {
+  it('should remove some test2 functions', async () => {
     const test2Facet = await ethers.getContractAt('Test2Facet', diamondAddress)
     // array of funcSigs, needs to passed in .get(functionNames)
     // later on selectors returned from Sigs using getSighash() there itself
@@ -311,7 +311,7 @@ describe('DiamondTest', async function () {
   })
 
   // Test # 10
-  it.only('should remove some test1 functions', async () => {
+  it('should remove some test1 functions', async () => {
     const test1Facet = await ethers.getContractAt('Test1Facet', diamondAddress)
 
     const functionsToKeep = ['test1Func2()', 'test1Func11()', 'test1Func12()']
@@ -348,23 +348,26 @@ describe('DiamondTest', async function () {
   // Test # 11: 1XdiamondCut() and 3X std. Facets
   // INFO: 1. removal of f() will inevitably remove the facets-entries from the struct#1, per REMOVE() code (las line)
   // 2. 14 will be removed out of 16 f(), calc. below
-  it.only('remove all functions and facets except \'diamondCut\' and \'facets\'', async () => {
+  it('remove all functions and facets except \'diamondCut\' and \'facets\'', async () => {
     let selectors = []  // init to zero-value array
-    // get all 5 (3 std. facets + 2 test facets) facets for now
+    // get all 5 (3 std. facets + 2 test facets) facets: Facet-struct-type (addresses, bytes4[])
     let facets = await diamondLoupeFacet.facets() // no need to init to zero-value array... 
     // passing on an actual value = 5
     for (let i = 0; i < facets.length; i++) { // 0 - 4
-      // returning all the selectors = 1+5+2+3(21)+5(20) = 16(49) in all
+      // returning all the selectors = 1+5+2+3(21)+5(20) = 16(49) in all out of which 14 will be remoed
       // Spread syntax (...)
+      // to access f() selectors in facets[i][j], we write facets[i].functionSelectors
+      // and what gets expanded is the bytes4[]'s functionSelectors, all pushed
       selectors.push(...facets[i].functionSelectors)
       // expands all selectors contained inside this facet[i] and pushes to 'selectors'
     }
     // filter/remove facets() and diamondCut() from 'selectors' and returned the filtered array
     selectors = removeSelectors(selectors, ['facets()', 'diamondCut(tuple(address,uint8,bytes4[])[],address,bytes)'])
+    
     // 14 selectors will return above
 
     // 3-step tx = remove
-    console.log("\nRemoving selectos using diamondCut()")
+    console.log("\nRemoving selectors using diamondCut()")
 
     tx = await diamondCutFacet.diamondCut(
       [   // array of struct
@@ -398,52 +401,87 @@ describe('DiamondTest', async function () {
     assert.sameMembers(facets[1][1], ['0x7a0ed627'])
   })
 
-  // Test # 12  
+  // Test # 12- Mix and match of 'Actions' in 1 single tx
   it('add most functions and facets', async () => {
+    // getSelectors() will return all 5 f() of Loupe - JS hardcoded
+    // diamondLoupeFacetSelectors has 4 f() except sI(b4)
     const diamondLoupeFacetSelectors = getSelectors(diamondLoupeFacet).remove(['supportsInterface(bytes4)'])
+    // // maybe kept aside for now to exec replaceF() later
+    // for now, Test1Facet's 'supportsInterface' is gonna be re-added, below
+
     const Test1Facet = await ethers.getContractFactory('Test1Facet')
     const Test2Facet = await ethers.getContractFactory('Test2Facet')
-    // Any number of functions from any number of facets can be added/replaced/removed in a
-    // single transaction
-    const cut = [
+
+    // Any number of functions from any number of facets can be added/replaced/removed...
+    // in a single transaction
+    // Nothing to do for DiamondCutFacet.sol, it already has its diamondCut()
+    const cut = [   // 4 elements in cut[] = _diamondCut[], 1st arg. of diamondCut()
       {
-        facetAddress: addresses[1],
+        facetAddress: addresses[1], //DiamondLoupeFacet.sol
         action: FacetCutAction.Add,
+        // facets() is already there in the Diamond (Test # 11)
         functionSelectors: diamondLoupeFacetSelectors.remove(['facets()'])
+        // functionSelectors has 3 f() to be re-added
       },
       {
-        facetAddress: addresses[2],
+        facetAddress: addresses[2], // OwnershipFacet.sol
         action: FacetCutAction.Add,
+        // both f() of this facet need to be re-added
         functionSelectors: getSelectors(ownershipFacet)
       },
       {
-        facetAddress: addresses[3],
+        facetAddress: addresses[3], // Test1Facet.sol
         action: FacetCutAction.Add,
-        functionSelectors: getSelectors(Test1Facet)
+        functionSelectors: getSelectors(Test1Facet) // all 21 f() need to be re-added
+        // Loupe()'s supportsInterface() is Not gonna re-added bcz Test1Facet's is gonna be
+        // maybe kept aside for now to exec replaceF() later
       },
       {
-        facetAddress: addresses[4],
+        facetAddress: addresses[4], // Test2Facet.sol
         action: FacetCutAction.Add,
-        functionSelectors: getSelectors(Test2Facet)
+        functionSelectors: getSelectors(Test2Facet) // all 20 f() need to be re-added
       }
     ]
-    tx = await diamondCutFacet.diamondCut(cut, ethers.constants.AddressZero, '0x', { gasLimit: 8000000 })
+    // 3-step std. tx: 
+    console.log("\nRE-Adding all 48 selectors using diamondCut()")
+    tx = await diamondCutFacet.diamondCut(cut,      // 46 f() being re-added to make it a total of 48/49
+      ethers.constants.AddressZero, 
+      '0x', 
+      { gasLimit: 8000000 })
+    
     txReceipt = await tx.wait()
+
     if (!txReceipt.status) {
       throw Error(`Diamond upgrade failed: ${tx.hash}`)
     }
+
+    // facets has 5 elements in facets-array (type-struct Facets{addresses, selectors})
     const facets = await diamondLoupeFacet.facets()
+    // facetAddresses array has 5 elements
     const facetAddresses = await diamondLoupeFacet.facetAddresses()
+    // all 13 asserts in 1 single unit test by Nick
     assert.equal(facetAddresses.length, 5)
     assert.equal(facets.length, 5)
-    assert.sameMembers(facetAddresses, addresses)
+    assert.sameMembers(facetAddresses, addresses) // addresses array has 5 facet-addresses pushed onto it
+    // facets[1-D index] contains all addresses
     assert.equal(facets[0][0], facetAddresses[0], 'first facet')
     assert.equal(facets[1][0], facetAddresses[1], 'second facet')
     assert.equal(facets[2][0], facetAddresses[2], 'third facet')
     assert.equal(facets[3][0], facetAddresses[3], 'fourth facet')
     assert.equal(facets[4][0], facetAddresses[4], 'fifth facet')
+    // what's the point in having above 5 tests after assert # 3?
+
+    // getSelectors(diamondCutFacet) has only 1 selector- diamondCut()
+    // facets[findAddressPositionInFacets(addresses[0], facets)][1] returns : bytes4[]-selectors
+    // the above 2 are matched against each other inside assert as both return list of selectors...
+    // for all the 5 facets below
+    // R.H.S in total is returning 48 f() out of 49 f()
+
+    // findAddressPositionInFacets() returns 'i', index of 'facetAddress' inside facets-struct-array
+    // ultimately, this all gets resolved to assert(facets[0][0], getSelectors(facet))
     assert.sameMembers(facets[findAddressPositionInFacets(addresses[0], facets)][1], getSelectors(diamondCutFacet))
     assert.sameMembers(facets[findAddressPositionInFacets(addresses[1], facets)][1], diamondLoupeFacetSelectors)
+    // "diamondLoupeFacetSelectors" does NOT have sI(bytes4), that's why here we did not take getSelectors(DLoupeF)
     assert.sameMembers(facets[findAddressPositionInFacets(addresses[2], facets)][1], getSelectors(ownershipFacet))
     assert.sameMembers(facets[findAddressPositionInFacets(addresses[3], facets)][1], getSelectors(Test1Facet))
     assert.sameMembers(facets[findAddressPositionInFacets(addresses[4], facets)][1], getSelectors(Test2Facet))

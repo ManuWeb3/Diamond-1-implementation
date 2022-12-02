@@ -130,9 +130,10 @@ const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 }    //inspired from IDia
 // find a particular address' position in the ('factes' array) return value of diamondLoupeFacet.facets()
 // 'diamondLoupeFacet' is an instance of contract abstraction for: DiamondLoupeFacet.sol, in JS
 // and factes() is its first f()
-// ooking for the index/position of a facet's address in the factes array of struct Factes with 2 members: addresses and bytes4[]
+// looking for the index/position of a facet's address in the factes array of struct Facets with 2 members: addresses and bytes4[]
  function findAddressPositionInFacets (facetAddress, facets) {
   for (let i = 0; i < facets.length; i++) {
+    // struct Facet {facetAddress, functionSelectors} - 2D array: facets[i][j]
     if (facets[i].facetAddress === facetAddress) {
       return i
     }
