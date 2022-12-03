@@ -279,7 +279,8 @@ library LibDiamond {
         }
 
         enforceHasContractCode(_init, "LibDiamondCut: _init address has no code"); 
-               
+        // eventually, above diamondCut() is calling _init's _calldata() via delegeatecall()
+        // that's why DiamondInit is deployed first (earleir than the facets and Diamond.sol)
         (bool success, bytes memory error) = _init.delegatecall(_calldata);
         if (!success) {
             if (error.length > 0) {
